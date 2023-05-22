@@ -1,5 +1,7 @@
 package searchengine.services;
 
+import java.util.concurrent.Callable;
+
 public interface IndexingService
 {
     public void startIndexing();

@@ -13,10 +13,7 @@ import searchengine.model.Page;
 import searchengine.model.StatusType;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Service
@@ -142,8 +139,12 @@ public class IndexingServiceImpl implements IndexingService
                 }
             }
         }).start();*/
+        //
+
+
 
         // Блок Б3.2/1 с new Thread - Рабочий
+        /*
         for (Site site:sites.getSites())
             {
                 searchengine.model.Site siteDB = new searchengine.model.Site();
@@ -161,13 +162,13 @@ public class IndexingServiceImpl implements IndexingService
                 for (searchengine.model.Site siteDB:siteRepository.findAll())
                     {
 
-                        /*
-                        Page pageSearch = new Page();
-                        pageSearch.setSite(siteDB);
-                        pageSearch.setSiteId(siteDB.getId());
-                        pageSearch.setPath(siteDB.getUrl()); // 16 мая 23
-                        new ForkJoinPool().invoke(new PageWriter(pageSearch, pageRepository, siteRepository, siteDB.getUrl()));
-                        */
+
+//                        Page pageSearch = new Page();
+//                        pageSearch.setSite(siteDB);
+//                        pageSearch.setSiteId(siteDB.getId());
+//                        pageSearch.setPath(siteDB.getUrl()); // 16 мая 23
+//                        new ForkJoinPool().invoke(new PageWriter(pageSearch, pageRepository, siteRepository, siteDB.getUrl()));
+
 
                         try {
                             new ForkJoinPool().invoke(new PageWriter(siteDB, pageRepository, siteRepository));
@@ -181,6 +182,42 @@ public class IndexingServiceImpl implements IndexingService
                     }
 
             }).start();
+        //
+        */
+
+
+
+        // Блок Б3.2/2
+        for (Site site:sites.getSites())
+        {
+            searchengine.model.Site siteDB = new searchengine.model.Site();
+            siteDB.setName(site.getName());
+            siteDB.setUrl(site.getUrl());
+            siteDB.setStatus(StatusType.INDEXING);
+            siteDB.setStatusTime(new Date());
+            siteRepository.save(siteDB);
+
+            System.out.println("Выполнено сохранение сайта " + site);
+        }
+
+        Stack<RunnableFuture<Boolean>> taskList = new Stack<>();
+        Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
+        for (searchengine.model.Site siteDB : siteIterable)
+        {
+            RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
+            taskList.add(futureValue);
+            System.out.println("Выполнено добавление сайта " + siteDB + " в FJP/Future");
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        taskList.forEach(executor::execute);
+
+        ResultCheckerParse resultCheckerExample = new ResultCheckerParse(taskList);
+        executor.execute(resultCheckerExample);
+        executor.shutdown();
+
+        System.out.println("Завершение метода startIndexing");
+    //
 
 
 

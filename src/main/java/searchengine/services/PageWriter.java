@@ -45,10 +45,24 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 //public class PageWriter extends RecursiveTask<Set<Page>>
 //public class PageWriter extends RecursiveTask<Page>
 public class PageWriter extends RecursiveAction {
+    /*
     @Autowired
     private PageRepository pageRepository;
     @Autowired
     private SiteRepository siteRepository;
+    */
+
+    private SiteRepository siteRepository;
+
+    private PageRepository pageRepository;
+
+    @Autowired
+    public PageWriter(SiteRepository siteRepository,PageRepository pageRepository) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;}
+//    @Autowired
+//    public PageWriter(PageRepository pageRepository) {this.pageRepository = pageRepository;}
+
+
+
 
 //    @Autowired
 //    private SessionFactory sessionFactory;

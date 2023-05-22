@@ -57,20 +57,20 @@ public class Application
 
     //Вар.1.2 Работает
 //    @Bean
-    public DataSource dataSource()
-    {
-        return DataSourceBuilder.create()
-                .driverClassName("com.mysql.cj.jdbc.Driver")
-                .url("jdbc:mysql://localhost:3306/search_engine")
-                .username("root")
-                .password("171605mEi")
-                .build();
-    }
-
-    @Bean
-    public PlatformTransactionManager transactionManager(){
-        return new DataSourceTransactionManager(dataSource());
-    }
+//    public DataSource dataSource()
+//    {
+//        return DataSourceBuilder.create()
+//                .driverClassName("com.mysql.cj.jdbc.Driver")
+//                .url("jdbc:mysql://localhost:3306/search_engine")
+//                .username("root")
+//                .password("171605mEi")
+//                .build();
+//    }
+//
+//    @Bean
+//    public PlatformTransactionManager transactionManager(){
+//        return new DataSourceTransactionManager(dataSource());
+//    }
     //
 
 
