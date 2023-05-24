@@ -10,15 +10,23 @@ import java.util.concurrent.ForkJoinPool;
 @NoArgsConstructor
 public class StartIndexing implements Callable<Boolean>
 {
-
+    /*
     private SiteRepository siteRepository;
 
     private PageRepository pageRepository;
 
     @Autowired
-    public StartIndexing(SiteRepository siteRepository) {this.siteRepository = siteRepository;}
-    @Autowired
-    public StartIndexing(PageRepository pageRepository) {this.pageRepository = pageRepository;}
+    public StartIndexing(SiteRepository siteRepository,PageRepository pageRepository) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;}
+    */
+
+    //
+    /*
+//    @Autowired
+    private PageWriter pageWriter;
+    //    @Autowired
+    public StartIndexing(PageWriter pageWriter) { this.pageWriter = pageWriter;}
+     */
+    //
 
 
     Site siteDB;
@@ -45,7 +53,14 @@ public class StartIndexing implements Callable<Boolean>
         */
 
 
-        new ForkJoinPool().invoke(new PageWriter(siteDB, pageRepository, siteRepository));
+        new ForkJoinPool().invoke(new PageWriter(siteDB));
+
+        //
+        /*
+        PageWriter pageWriter = (PageWriter)SpringUtils.ctx.getBean(PageWriter.class);
+        new ForkJoinPool().invoke(pageWriter);
+         */
+        //
 
         return true;
     }

@@ -1,6 +1,6 @@
 package searchengine.services;
 
-import com.fasterxml.jackson.module.paramnames.PackageVersion;
+import com.fasterxml.jackson.databind.cfg.PackageVersion;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.SessionFactory;
@@ -9,7 +9,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -42,25 +44,27 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Service
 @NoArgsConstructor
 @EnableTransactionManagement
+//@Component
 //public class PageWriter extends RecursiveTask<Set<Page>>
 //public class PageWriter extends RecursiveTask<Page>
 public class PageWriter extends RecursiveAction {
+
+    @Autowired
+    private PageRepository pageRepository;
+    @Autowired
+    private SiteRepository siteRepository;
+
     /*
-    @Autowired
+    private SiteRepository siteRepository;
     private PageRepository pageRepository;
     @Autowired
-    private SiteRepository siteRepository;
+    public PageWriter(@Autowired SiteRepository siteRepository, @Autowired PageRepository pageRepository) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;}
+   */
+
+   /*
+    @Autowired
+    public PageWriter(PageRepository pageRepository) {this.pageRepository = pageRepository;}
     */
-
-    private SiteRepository siteRepository;
-
-    private PageRepository pageRepository;
-
-    @Autowired
-    public PageWriter(SiteRepository siteRepository,PageRepository pageRepository) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;}
-//    @Autowired
-//    public PageWriter(PageRepository pageRepository) {this.pageRepository = pageRepository;}
-
 
 
 
@@ -80,6 +84,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
 
 
 
+
 //    public static final String USER_AGENT ="Microsoft Edge (Win 10 x64): Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586";
 
 
@@ -93,13 +98,6 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     followRedirects: false
     */
 
-    public PageWriter getPageWriter() {
-        return pageWriter;
-    }
-    public void setPageWriter(PageWriter pageWriter) {
-        this.pageWriter = pageWriter;
-    }
-    PageWriter pageWriter;
 
 
 
@@ -108,6 +106,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         this.indexingStarted = indexingStarted;
     }
 
+    /*
     public PageWriter(Page page
             , PageRepository pageRepository, SiteRepository siteRepository
 //            , boolean indexingStarted
@@ -117,9 +116,10 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         this.site = page.getSite(); // Убрать по идее !!!
         this.pageRepository = pageRepository;
         this.siteRepository = siteRepository;
-
     }
+    */
 
+    /*
     public PageWriter(Page page
             , PageRepository pageRepository, SiteRepository siteRepository
             , String linkAbs
@@ -130,18 +130,20 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         this.pageRepository = pageRepository;
         this.siteRepository = siteRepository;
         this.linkAbs = linkAbs;
-
-
     }
+    */
 
-    public PageWriter(Site site, PageRepository pageRepository, SiteRepository siteRepository) throws IOException
+    /*
+    public PageWriter(Site site
+            , PageRepository pageRepository, SiteRepository siteRepository
+    ) throws IOException
         {
             this.site = site;
     //        page = new Page();
     //        page.setSite(site);
 
-            this.pageRepository = pageRepository;
-            this.siteRepository = siteRepository;
+//            this.pageRepository = pageRepository;
+//            this.siteRepository = siteRepository;
 
             this.indexingStarted = true;
 
@@ -155,12 +157,44 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
             linkAbs  = page.getPath();
             addPage(page.getPath(), page.getPath());
         }
+        */
 
-    public PageWriter(PageRepository pageRepository, SiteRepository siteRepository) {
-        this.pageRepository = pageRepository;
-        this.siteRepository = siteRepository;
+//    public PageWriter(PageRepository pageRepository, SiteRepository siteRepository) {
+//        this.pageRepository = pageRepository;
+//        this.siteRepository = siteRepository;
+//    }
+
+
+    public PageWriter(Site site) throws IOException
+    {
+        this.site = site;
+        this.indexingStarted = true;
+        pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
+        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
+//        addPage(site.getUrl(), site.getUrl());
+
+        Page pageValues = new Page();
+        pageValues.setPath(site.getUrl());
+        pageValues.setSite(site);
+        pageValues.setSiteId(site.getId()); // 16 may
+        // Добавление HTML кода страницы:
+        // pageValues.setContent(documentToString(Jsoup.connect(page.getSite().getUrl()+path).get()));
+        pageValues.setContent(new Date().toString() + " - " + String.valueOf(TransactionSynchronizationManager.isActualTransactionActive()));   // Дописать !!!
+        pageValues.setCode(Jsoup.connect(site.getUrl())
+                .execute()
+                .statusCode());   //  int code = Jsoup.connect(linkAU).execute().statusCode();
+
+        pageRepository.save(pageValues);
+        this.page = pageValues;
+        this.linkAbs = site.getUrl();
+
     }
 
+    public PageWriter(Page pageValues, String linkAU)
+    {
+        this.page = page;
+        linkAbs = linkAU;
+    }
 
     public boolean isLink(String valueUrl) {
         boolean isLink = true;
@@ -222,6 +256,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         return stringWriter.toString();
     }
 
+    /*
     public void startPageSearch(Site siteSearch) {
 //        Page page = new ForkJoinPool().invoke(new PageWriter(siteSearch, pageRepository, siteRepository));
 
@@ -233,6 +268,8 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         new ForkJoinPool().invoke(new PageWriter(pageSearch, pageRepository, siteRepository, siteSearch.getUrl()));
 //        new ForkJoinPool().invoke(new PageWriter(pageSearch, pageRepository, siteRepository));
     }
+    */
+
 
     public boolean isFindPage(String path) {
         boolean isFind = false;
@@ -273,6 +310,8 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                 .statusCode());   //  int code = Jsoup.connect(linkAU).execute().statusCode();
 
         boolean tx = TransactionSynchronizationManager.isActualTransactionActive();
+
+        pageRepository.save(pageValues);
 
 //        if (!pageRepository.existsByPath(link))
         if (!pageRepository.existsByPathAndSite(link, site))
@@ -380,7 +419,8 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                                 Page pageValues = addPage(link,linkAU); // ???
                                 if (pageValues != null)
                                     {
-                                        PageWriter pageWriter = new PageWriter(pageValues, pageRepository, siteRepository, linkAU);
+//                                        PageWriter pageWriter = new PageWriter(pageValues, pageRepository, siteRepository, linkAU);
+                                        PageWriter pageWriter = new PageWriter(pageValues, linkAU);
                                         pageWriter.fork();
                                         pageWriterList.add(pageWriter);
                                     }

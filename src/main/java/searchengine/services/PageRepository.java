@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -15,7 +17,9 @@ import javax.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
+//@Component
 @EnableTransactionManagement
+@Repository
 public interface PageRepository extends CrudRepository<Page, Integer>
 {
         List<Page> findAllBySiteId(int siteId);

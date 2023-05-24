@@ -1,29 +1,31 @@
 package searchengine.services;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import org.apache.catalina.mbeans.DataSourceUserDatabaseMBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.model.Page;
 import searchengine.model.StatusType;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
 @Service
-@RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService
 {
-    @Autowired
+//    @Autowired
     private SiteRepository siteRepository;
-    @Autowired
+    //    @Autowired
     private PageRepository pageRepository;
+
+    @Autowired
+    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;
+//        this.startIndexing = startIndexing;
+        this.sites = sites;
+    }
+//    @Autowired
+
+//    private StartIndexing startIndexing;
+
 
     boolean indexingStarted = false; // Нужна ли?
 

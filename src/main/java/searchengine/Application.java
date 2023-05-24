@@ -42,6 +42,8 @@ public class Application
         SpringApplication.run(Application.class, args);
     }
 
+
+
     //Вар.1.1
 //     ЗАПУСТИЛОСЬ НО ВЫЛЕТАЕТ С ОШИБКОЙ В ПРОЦЕССЕ
 //    @Bean
