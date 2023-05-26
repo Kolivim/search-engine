@@ -472,10 +472,17 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
             } catch (IOException e) {
                 System.err.println("В классе PageWriter методе compute сработал IOException / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed() + ", " + e.getCause() + ", " + e.getLocalizedMessage());
 //                throw new RuntimeException(e);
+            }
+
+            // New, 26 may
+            catch (IllegalArgumentException e) {
+                System.err.println("В классе PageWriter методе compute сработал IllegalArgumentException / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed()+ ", " + e.getCause() + ", " + e.getLocalizedMessage());
+//                throw new RuntimeException(e);
             } catch (Exception e) {
                 System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed()+ ", " + e.getCause() + ", " + e.getLocalizedMessage());
 //                throw new RuntimeException(e);
             }
+
     }
 
     @Override
