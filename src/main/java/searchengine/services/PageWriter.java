@@ -187,13 +187,18 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         pageRepository.save(pageValues);
         this.page = pageValues;
         this.linkAbs = site.getUrl();
-
     }
 
     public PageWriter(Page pageValues, String linkAU)
     {
-        this.page = page;
+        this.page = pageValues;
         linkAbs = linkAU;
+
+        this.site = page.getSite(); // Проверить работу в Debug !!!
+
+
+        pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
+        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
     }
 
     public boolean isLink(String valueUrl) {
@@ -297,7 +302,14 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     public Page addPage(String link, String linkAU) throws IOException
 //    public synchronized Page addPage(String link, String linkAU) throws IOException
     {
-        Page result = null;
+
+        Page result =new Page();
+        result.setPath("Не добавляем страницу");
+        result.setSiteId(-1);
+        result.setContent("Не добавляем страницу");
+        result.setCode(-1);
+//        Page result = null;
+
         Page pageValues = new Page();
         pageValues.setPath(link);
         pageValues.setSite(site);
@@ -311,7 +323,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
 
         boolean tx = TransactionSynchronizationManager.isActualTransactionActive();
 
-        pageRepository.save(pageValues);
+//        pageRepository.save(pageValues);
 
 //        if (!pageRepository.existsByPath(link))
         if (!pageRepository.existsByPathAndSite(link, site))
@@ -326,6 +338,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                 */
 
                 result = pageValues;
+                System.out.println("Добавлена страница: " + pageValues.getPath() + " (" + linkAU + ")");
             }
         return result;
     }
@@ -457,10 +470,10 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                 System.err.println(e.getMessage());
                 throw new RuntimeException(e);
             } catch (IOException e) {
-                System.err.println("В классе PageWriter методе compute сработал IOException / RuntimeException(e) " + e.getMessage() + " " + e.getStackTrace() + " " + e.getSuppressed());
+                System.err.println("В классе PageWriter методе compute сработал IOException / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed() + ", " + e.getCause() + ", " + e.getLocalizedMessage());
 //                throw new RuntimeException(e);
             } catch (Exception e) {
-                System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) " + e.getMessage() + " " + e.getStackTrace() + " " + e.getSuppressed());
+                System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed()+ ", " + e.getCause() + ", " + e.getLocalizedMessage());
 //                throw new RuntimeException(e);
             }
     }
