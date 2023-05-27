@@ -27,7 +27,7 @@ public class IndexingServiceImpl implements IndexingService
 //    private StartIndexing startIndexing;
 
 
-    boolean indexingStarted = false; // Нужна ли?
+    boolean isIndexingStarted = false; // Нужна ли?
 
     private final SitesList sites;
 //    private final SimpleJpaRepository simpleJpaRepository; 16 мая - ЧТО ЭТО???
@@ -40,7 +40,7 @@ public class IndexingServiceImpl implements IndexingService
 
         // Блок Б1
         System.out.println("\nЗапущен метод startIndexing");
-        indexingStarted = true;
+        isIndexingStarted = true;
         // Проверка связи с таблицей sites и pages:
         /*
         Iterable<searchengine.model.Site> siteIterables = siteRepository.findAll();
@@ -208,7 +208,7 @@ public class IndexingServiceImpl implements IndexingService
         {
             RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
             taskList.add(futureValue);
-            System.out.println("Выполнено добавление сайта " + siteDB + " в FJP/Future");
+            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -216,9 +216,12 @@ public class IndexingServiceImpl implements IndexingService
 
         ResultCheckerParse resultCheckerExample = new ResultCheckerParse(taskList);
         executor.execute(resultCheckerExample);
+
         executor.shutdown();
 
-        System.out.println("Завершение метода startIndexing");
+        isIndexingStarted = false;
+
+        System.out.println("\nЗавершение метода startIndexing");
     //
 
 
@@ -253,7 +256,7 @@ public class IndexingServiceImpl implements IndexingService
     public void stopIndexing()
     {
         System.out.println("\nЗапущен метод stopIndexing");
-        indexingStarted = false;
+        isIndexingStarted = false;
 
         /*
         for(PageWriter pageWriterValue : pageWriterList)
@@ -264,6 +267,6 @@ public class IndexingServiceImpl implements IndexingService
     }
 
     @Override
-    public boolean getIndexingStarted(){return indexingStarted;}
+    public boolean getIndexingStarted(){return isIndexingStarted;}
 
 }

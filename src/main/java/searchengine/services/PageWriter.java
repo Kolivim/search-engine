@@ -433,9 +433,15 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                                 if (pageValues != null)
                                     {
 //                                        PageWriter pageWriter = new PageWriter(pageValues, pageRepository, siteRepository, linkAU);
+
+//                                        site.addPage(pageValues); // Проверить debug - из-за этого дубли в page появляются
+                                        site.setStatusTime(new Date());
+
+                                        siteRepository.save(site);
                                         PageWriter pageWriter = new PageWriter(pageValues, linkAU);
                                         pageWriter.fork();
                                         pageWriterList.add(pageWriter);
+
                                     }
                               //  Page pageValues = new TestValue().addPageTV(link, linkAbs, site, pageRepository, siteRepository);
     //                            Page pageValues = new Page();
@@ -450,7 +456,8 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     //                            new TestValue().addPageTVS(link, linkAbs, pageWriter);
     //                            pageWriter.fork();
     //                            pageWriterList.add(pageWriter);
-                             } else {}
+
+                            } else {}
                     lock.readLock().unlock();
 //                    }
 
