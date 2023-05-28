@@ -11,42 +11,24 @@ import java.util.concurrent.ForkJoinPool;
 @NoArgsConstructor
 public class StartIndexing implements Callable<Boolean>
 {
-
-
-    private SiteRepository siteRepository; // 1
+    private SiteRepository siteRepository;
     Site siteDB;
-    public StartIndexing(Site siteDB){this.siteDB = siteDB;}
-
+    public StartIndexing(Site siteDB)
+    {
+        this.siteDB = siteDB;
+    }
 
     @Override
     public Boolean call() throws Exception
     {
-        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class); // 1
+        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
         new ForkJoinPool().invoke(new PageWriter(siteDB));
-        System.out.println("\nСайт " + siteDB.getUrl() + " - заверешение метода SIndexing и возврат boolean call()");
+        System.out.println
+                ("\nСайт " + siteDB.getUrl() + " - заверешение метода SIndexing и возврат boolean call()"
+                        + " , количество страниц по сайту = " + siteDB.getPages().size()                                    // * (Debug)
+                );
         siteDB.setStatus(StatusType.INDEXED);
         siteRepository.save(siteDB);
         return true;
     }
-
-
-
-    /*
-    private SiteRepository siteRepository;
-
-    private PageRepository pageRepository;
-
-    @Autowired
-    public StartIndexing(SiteRepository siteRepository,PageRepository pageRepository) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;}
-    */
-
-    //
-    /*
-//    @Autowired
-    private PageWriter pageWriter;
-    //    @Autowired
-    public StartIndexing(PageWriter pageWriter) { this.pageWriter = pageWriter;}
-     */
-    //
-
-}   // Закрывающая класс скобка - нужна!!!
+}

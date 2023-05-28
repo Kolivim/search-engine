@@ -171,7 +171,6 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         this.indexingStarted = true;
         pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
-//        addPage(site.getUrl(), site.getUrl());
 
         Page pageValues = new Page();
         pageValues.setPath(site.getUrl());
@@ -193,10 +192,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     {
         this.page = pageValues;
         linkAbs = linkAU;
-
         this.site = page.getSite(); // Проверить работу в Debug !!!
-
-
         pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
     }
@@ -356,7 +352,6 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
             try
             {
                 Thread.sleep(1500);
-
                 String path = page.getPath();
                 if (path == null || path ==  "/") {path = "";}
 //                String requestedPage = page.getSite().getUrl() + path;
@@ -474,19 +469,20 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                     }
 
             } catch (InterruptedException e) {
-                System.err.println(e.getMessage());
+                System.err.println("В классе PageWriter методе compute сработал InterruptedException / RuntimeException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass());
                 throw new RuntimeException(e);
+
             } catch (IOException e) {
-                System.err.println("В классе PageWriter методе compute сработал IOException / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed() + ", " + e.getCause() + ", " + e.getLocalizedMessage());
+                System.err.println("В классе PageWriter методе compute сработал IOException / RuntimeException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass());
 //                throw new RuntimeException(e);
             }
 
             // New, 26 may
             catch (IllegalArgumentException e) {
-                System.err.println("В классе PageWriter методе compute сработал IllegalArgumentException / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed()+ ", " + e.getCause() + ", " + e.getLocalizedMessage());
+                System.err.println("В классе PageWriter методе compute сработал IllegalArgumentException / RuntimeException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed()+ " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage()+ " ///6 " + e.getClass());
 //                throw new RuntimeException(e);
             } catch (Exception e) {
-                System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) " + e.getMessage() + ", " + e.getStackTrace() + ", " + e.getSuppressed()+ ", " + e.getCause() + ", " + e.getLocalizedMessage());
+                System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed()+ " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage()+ " ///6 " + e.getClass());
 //                throw new RuntimeException(e);
             }
 
