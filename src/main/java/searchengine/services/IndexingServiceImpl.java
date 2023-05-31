@@ -1,6 +1,7 @@
 package searchengine.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -27,6 +28,8 @@ public class IndexingServiceImpl implements IndexingService
     boolean isIndexingStarted = false;
     private final SitesList sites;
     ResultCheckerParse resultCheckerExample;    //1
+    Stack<RunnableFuture<Boolean>> taskList = new Stack<>(); //29
+    ExecutorService executor;   //29
 
     @Override
     public void startIndexing()
@@ -60,10 +63,10 @@ public class IndexingServiceImpl implements IndexingService
             siteDB.setStatusTime(new Date());
             siteRepository.save(siteDB);
 
-            System.out.println("Выполнено сохранение сайта " + site);
+            System.out.println("Выполнено сохранение сайта " + site);   //*
         }
 
-        Stack<RunnableFuture<Boolean>> taskList = new Stack<>();
+//        Stack<RunnableFuture<Boolean>> taskList = new Stack<>();  //29
         Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
         for (searchengine.model.Site siteDB : siteIterable)
         {
@@ -72,11 +75,13 @@ public class IndexingServiceImpl implements IndexingService
             System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(4); // TODO : Внести количество потоков с привязкой к количеству сайтов
+//        ExecutorService executor = Executors.newFixedThreadPool(4); // //29
+        executor = Executors.newFixedThreadPool(4); // TODO : Внести количество потоков с привязкой к количеству сайтов
         taskList.forEach(executor::execute);
 
-//        ResultCheckerParse resultCheckerExample = new ResultCheckerParse(taskList);   //1
-        resultCheckerExample = new ResultCheckerParse(taskList);
+//        ResultCheckerParse resultCheckerExample = new ResultCheckerParse(taskList);   //1 рабочее
+        resultCheckerExample = new ResultCheckerParse(taskList);  //1 рабочее
+//        resultCheckerExample = new ResultCheckerParse();
 
         executor.execute(resultCheckerExample);
 
@@ -84,7 +89,7 @@ public class IndexingServiceImpl implements IndexingService
 
 //        isIndexingStarted = false; // Завершать нужно по завершению потоков - RCP
 
-        System.out.println("\nЗавершение метода startIndexing");
+        System.out.println("\nЗавершение метода startIndexing в классе IndexingServiceImpl");
     }
 
     @Override
@@ -95,6 +100,8 @@ public class IndexingServiceImpl implements IndexingService
             {
                 resultCheckerExample.setIndexingStopped(true);
                 System.out.println("\nВыполнена передача значения true сеттеру setIndexingStopped");
+                List<Runnable> notExecuted = executor.shutdownNow();
+                System.out.println("\nЛист невыполненных задач: " + notExecuted);
             }
         isIndexingStarted = false;
 

@@ -29,6 +29,22 @@ public class StartIndexing implements Callable<Boolean>
                 );
         siteDB.setStatus(StatusType.INDEXED);
         siteRepository.save(siteDB);
+
+        // 29
+        if (Thread.currentThread().isInterrupted())
+            {
+                System.out.println("Вызвана остановка потока в методе call() класса StartIndexing для сайта: " + siteDB.getUrl());
+                return false;
+            }
+        //
+
         return true;
+    }
+
+    public void cancel()
+    {
+//        interrupt();
+
+        System.out.println("Вызван метод cancel() в классе StartIndexing");
     }
 }

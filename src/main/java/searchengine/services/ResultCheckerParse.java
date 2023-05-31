@@ -4,6 +4,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RunnableFuture;
@@ -11,15 +12,20 @@ import java.util.concurrent.RunnableFuture;
 
 public class ResultCheckerParse implements Runnable
 {
-    private final List<RunnableFuture<Boolean>> runnableFutureList;
+//    private final List<RunnableFuture<Boolean>> runnableFutureList;
+    private final Stack<RunnableFuture<Boolean>> runnableFutureList;
     private boolean isIndexingStopped;  //1
     public void setIndexingStopped(boolean indexingStopped) {this.isIndexingStopped = indexingStopped;}  //1
     public boolean isIndexingStopped() {return isIndexingStopped;}  //1
     private IndexingService indexingService; //1
-    public ResultCheckerParse(List<RunnableFuture<Boolean>> runnableFutureList)
+    public ResultCheckerParse(
+//                                List<RunnableFuture<Boolean>> runnableFutureList
+                                Stack<RunnableFuture<Boolean>> runnableFutureList
+                                )
     {
-        this.runnableFutureList = runnableFutureList;
-        this.isIndexingStopped = false;  //1
+//        this.runnableFutureList = (Stack<RunnableFuture<Boolean>>)SpringUtils.ctx.getBean("taskList", IndexingService.class);
+                this.runnableFutureList = runnableFutureList;
+//        this.isIndexingStopped = false;  //1
         this.indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingService.class);    //1
     }
     @Override
@@ -31,7 +37,7 @@ public class ResultCheckerParse implements Runnable
             {
                 for (Iterator<RunnableFuture<Boolean>> futureIterator = runnableFutureList.iterator(); futureIterator.hasNext(); ) {
                     RunnableFuture<Boolean> future = futureIterator.next();
-                    if (future.isDone())
+                    if (future.isDone()) // || future.isCancelled()
                     {
 //                        try {
 //                            System.out.println("\nЗадача выполнилась : " + future.get());
@@ -45,7 +51,7 @@ public class ResultCheckerParse implements Runnable
                     {
 //                        try {   //try1
                         boolean cancelled = future.cancel(true);
-                        System.out.println("\nИндексация остановлена пользователем");
+                        System.out.println("\nИндексация остановлена пользователем: " + cancelled);
 //                        } catch(CancellationException e) { System.err.println("В классе ResultCheckerParse сработал CancellationException ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass());} // try1
                     }
                 }
