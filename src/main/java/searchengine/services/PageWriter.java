@@ -46,7 +46,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @EnableTransactionManagement
 //@Component
 //public class PageWriter extends RecursiveTask<Set<Page>>
-//public class PageWriter extends RecursiveTask<Page>
+//public class PageWriter extends RecursiveTask<Boolean>{
 public class PageWriter extends RecursiveAction {
 
     @Autowired
@@ -348,6 +348,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     @Override
     protected void compute()
     {
+        System.out.println("\nПолучен запрос в странице " + page.getPath() + " на остановку потока: " + Thread.currentThread().isInterrupted());
             List<PageWriter> pageWriterList = new ArrayList<>();
             try
             {
@@ -485,7 +486,6 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                 System.err.println("В классе PageWriter методе compute сработал Exception / RuntimeException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed()+ " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage()+ " ///6 " + e.getClass());
 //                throw new RuntimeException(e);
             }
-
     }
 
     @Override

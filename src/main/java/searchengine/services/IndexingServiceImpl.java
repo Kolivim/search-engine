@@ -7,6 +7,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.StatusType;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -70,9 +71,25 @@ public class IndexingServiceImpl implements IndexingService
         Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
         for (searchengine.model.Site siteDB : siteIterable)
         {
+            ///*
+            //Вар.1
             RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
             taskList.add(futureValue);
             System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
+            //*/
+
+            /*
+            // Вар.2
+            RunnableFuture<Boolean> futureValue = null;
+            try
+            {
+                futureValue = new FutureTask<>(new ForkJoinPool().invoke(new PageWriter(siteDB)));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            taskList.add(futureValue);
+            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
+            */
         }
 
 //        ExecutorService executor = Executors.newFixedThreadPool(4); // //29
