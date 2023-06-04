@@ -3,20 +3,8 @@ package searchengine.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.jpa.repository.Query;
-import searchengine.services.Auditable;
 
 import javax.persistence.*;
-import javax.persistence.Index;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.RecursiveTask;
 
 @Getter
 @Setter
