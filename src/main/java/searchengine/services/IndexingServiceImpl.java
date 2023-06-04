@@ -71,12 +71,19 @@ public class IndexingServiceImpl implements IndexingService
         Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
         for (searchengine.model.Site siteDB : siteIterable)
         {
-            ///*
+
+//            try {
+//                ForkJoinTask<?> result = new ForkJoinTask<?>().adapt((Runnable) new PageWriter(siteDB));
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+
+//            /*
             //Вар.1
             RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
             taskList.add(futureValue);
             System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-            //*/
+//            */
 
             /*
             // Вар.2
@@ -110,7 +117,7 @@ public class IndexingServiceImpl implements IndexingService
     }
 
     @Override
-    public void stopIndexing()
+    public boolean stopIndexing()
     {
         System.out.println("\nЗапущен метод stopIndexing в классе IndexingServiceImpl");
         if(isIndexingStarted)
@@ -119,10 +126,11 @@ public class IndexingServiceImpl implements IndexingService
                 System.out.println("\nВыполнена передача значения true сеттеру setIndexingStopped");
                 List<Runnable> notExecuted = executor.shutdownNow();
                 System.out.println("\nЛист невыполненных задач: " + notExecuted);
-            }
-        isIndexingStarted = false;
-
+                isIndexingStarted = false;
+                return true;
+            } else {return false;}
     }
+
     @Override
     public void setIndexingStarted(boolean indexingStarted) {isIndexingStarted = indexingStarted;}  //28
     @Override

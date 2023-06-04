@@ -1,19 +1,13 @@
 package searchengine.services;
 
-import com.fasterxml.jackson.databind.cfg.PackageVersion;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.SessionFactory;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,19 +18,17 @@ import searchengine.model.Page;
 import searchengine.model.Site;
 
 import javax.persistence.LockModeType;
-import javax.print.DocFlavor;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.security.Timestamp;
-import java.text.Format;
-import java.util.*;
-import java.util.concurrent.ForkJoinPool;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -47,14 +39,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 //@Component
 //public class PageWriter extends RecursiveTask<Set<Page>>
 //public class PageWriter extends RecursiveTask<Boolean>{
-public class PageWriter extends RecursiveAction {
+public class PageWriterTask extends RecursiveAction {
 
     @Autowired
     private PageRepository pageRepository;
     @Autowired
     private SiteRepository siteRepository;
 
-    IndexingService indexingService;
     /*
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
@@ -166,14 +157,12 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
 //    }
 
 
-    public PageWriter(Site site) throws IOException
+    public PageWriterTask(Site site) throws IOException
     {
         this.site = site;
         this.indexingStarted = true;
         pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
-
-        indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
 
         Page pageValues = new Page();
         pageValues.setPath(site.getUrl());
@@ -191,15 +180,13 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
         this.linkAbs = site.getUrl();
     }
 
-    public PageWriter(Page pageValues, String linkAU)
+    public PageWriterTask(Page pageValues, String linkAU)
     {
         this.page = pageValues;
         linkAbs = linkAU;
         this.site = page.getSite(); // Проверить работу в Debug !!!
         pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
-
-        indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
     }
 
     public boolean isLink(String valueUrl) {
@@ -353,14 +340,8 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
     @Override
     protected void compute()
     {
-        indexingStarted = indexingService.getIndexingStarted();
-        if(indexingStarted)
-        {
-            System.out.println("\n(indexingStarted на странице " + page.getPath() + " : " + indexingStarted);
-        };
-
         System.out.println("\nПолучен запрос в странице " + page.getPath() + " на остановку потока: " + Thread.currentThread().isInterrupted());
-            List<PageWriter> pageWriterList = new ArrayList<>();
+            List<PageWriterTask> pageWriterList = new ArrayList<>();
             try
             {
                 Thread.sleep(1500);
@@ -445,7 +426,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
                                         site.setStatusTime(new Date());
 
                                         siteRepository.save(site);
-                                        PageWriter pageWriter = new PageWriter(pageValues, linkAU);
+                                        PageWriterTask pageWriter = new PageWriterTask(pageValues, linkAU);
                                         pageWriter.fork();
                                         pageWriterList.add(pageWriter);
 
@@ -475,7 +456,7 @@ public static final String USER_AGENT = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5
 
 
 
-                for (PageWriter pageWriter : pageWriterList)
+                for (PageWriterTask pageWriter : pageWriterList)
                     {
                         pageWriter.join();
                     }
