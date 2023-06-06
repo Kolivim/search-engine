@@ -287,13 +287,13 @@ public class PageWriter extends RecursiveAction {
                         .get();
 
                 Elements fullLinks = pageLink.select("a[href]");
-                for (Element valueLink : fullLinks) {
+                for (Element valueLink : fullLinks)
+                {
                     String linkAU = valueLink.absUrl("href");
                     String link = valueLink.attr("href");
 
 
                     boolean isChildren = isChildren(linkAU, requestedPage);
-//                    boolean isNotFindPage = !pageRepository.findByPath(link).isPresent();
                     boolean isNotFindPage2 = !pageRepository.existsByPath(link);    // Убрать !!!
                     boolean isNotFindPage3 = !pageRepository.existsByPathAndSite(link, site);
 
@@ -322,7 +322,6 @@ public class PageWriter extends RecursiveAction {
                             pageWriterList.add(pageWriter);
 
                         }
-
 
                     } else
                         {

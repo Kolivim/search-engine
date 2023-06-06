@@ -32,6 +32,7 @@ public class StartIndexing implements Callable<Boolean>
         siteDB.setStatus(StatusType.INDEXED);
         siteRepository.save(siteDB);
 
+
         // 29
         if (Thread.currentThread().isInterrupted())
             {

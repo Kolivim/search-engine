@@ -12,6 +12,21 @@ public class MessageService
 {
     private Map<String,String> messageList = new TreeMap<>();
 
+    public ResponseEntity<Map<String,String>> startIndexingOk()
+    {
+        messageList.clear();
+        messageList.put("result", "true");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
+    }
+
+    public ResponseEntity<Map<String,String>> startIndexingError()
+    {
+        messageList.clear();
+        messageList.put("result", "false");
+        messageList.put("error", "Индексация уже запущена");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(505));
+    }
+
     public ResponseEntity<Map<String,String>> stopIndexingOk()
     {
         messageList.clear();
