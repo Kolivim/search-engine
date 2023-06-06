@@ -19,19 +19,20 @@ public class IndexingServiceImpl implements IndexingService
     //    @Autowired
     private PageRepository pageRepository;
 
-    @Autowired
-    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites) {this.siteRepository = siteRepository;this.pageRepository = pageRepository;
-//        this.startIndexing = startIndexing;
-        this.sites = sites;
-    }
-
-    // Flag from indexing status in API
-    boolean isIndexingStarted = false;
+    boolean isIndexingStarted = false;    // Flag from indexing status in API
     private final SitesList sites;
     ResultCheckerParse resultCheckerExample;    //1
     Stack<RunnableFuture<Boolean>> taskList = new Stack<>(); // 29
     List<StartIndexing> listStartIndexing = new ArrayList<>(); //    5.06
     ExecutorService executor;   //29
+
+    @Autowired
+    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites)
+    {
+        this.sites = sites;
+        this.siteRepository = siteRepository;this.pageRepository = pageRepository;
+//        this.startIndexing = startIndexing;
+    }
 
     @Override
     public boolean startIndexing()
@@ -69,7 +70,8 @@ public class IndexingServiceImpl implements IndexingService
 
 //        Stack<RunnableFuture<Boolean>> taskList = new Stack<>();  //29
             Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-            for (searchengine.model.Site siteDB : siteIterable) {
+            for (searchengine.model.Site siteDB : siteIterable)
+            {
 
 //            try {
 //                ForkJoinTask<?> result = new ForkJoinTask<?>().adapt((Runnable) new PageWriter(siteDB));
@@ -136,22 +138,23 @@ public class IndexingServiceImpl implements IndexingService
         System.out.println("\nЗапущен метод stopIndexing в классе IndexingServiceImpl");
         if(isIndexingStarted)
             {
-
-                // Блок на пробу с присвоением indexSt pagewriter от SiteDB status
-                Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-
-               /*
+                // Блок на пробу с присвоением indexingStatus SiteDB
+//               /*
+               Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
                 for (searchengine.model.Site siteDB : siteIterable)
                 {
                     if(siteDB.getStatus().equals(StatusType.INDEXING))
                     {
                         siteDB.setStatus(StatusType.FAILED);
                         siteRepository.save(siteDB);
-                        System.out.println("\nIndexingServiceImpl Выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
+                        System.out.println("\nВ классе IndexingServiceImpl в методе stopIndexing() выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
                     }
                 }
-                */
+//                */
 
+                // June 11
+                isIndexingStarted = false;
+                //
                 //
                 resultCheckerExample.setIndexingStopped(true);
                 //
@@ -161,11 +164,26 @@ public class IndexingServiceImpl implements IndexingService
                 }  //  5.06
                 //
 
-                System.out.println("\nВыполнена передача значения true сеттеру setIndexingStopped");
+                System.out.println("\nКласс IndexingServImp метод stopIndexing - выполнена передача значения true сеттеру setIndexingStopped");
                 List<Runnable> notExecuted = executor.shutdownNow();
+
+                // 11 june
+//                try
+//                {
+//                    executor.awaitTermination(1, TimeUnit.DAYS);
+//                } catch (InterruptedException e)
+//                {
+//                    System.err.println("В классе IndexingЫукмШьзд методе compute сработал InterruptedException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на .....:  ");
+//                }
+                //
+
                 System.out.println("\nЛист невыполненных задач: " + notExecuted);
-                isIndexingStarted = false;
-                System.out.println("\nВыполнено присвоение  isIndexingStarted значения: " + isIndexingStarted);
+
+                //
+//                isIndexingStarted = false;  // перенести внутрь остановки ???
+                System.out.println("\nВ классе IndexingServImpl завершение метода stopIndexing(), значение isIndexingStarrted=" + isIndexingStarted);
+                //
+
                 return true;
             } else {return false;}
     }

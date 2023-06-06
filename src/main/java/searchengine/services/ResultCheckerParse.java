@@ -2,6 +2,7 @@ package searchengine.services;
 
 import lombok.NoArgsConstructor;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
@@ -45,7 +46,7 @@ public class ResultCheckerParse implements Runnable
 //                        }
                     }
 
-                    if (isIndexingStopped)  // TODO: Остановка кнопкой - реализовать    //28m
+                    if (isIndexingStopped)
                     {
 //                        try {   //try1
                         boolean cancelled = future.cancel(true);
@@ -56,8 +57,31 @@ public class ResultCheckerParse implements Runnable
                 }
             }
 
-        indexingService.setIndexingStarted(false);  //1
-        System.out.println("\nЗавершение метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() + "\nЗначение переменной isIndexingStarted: " + indexingService.getIndexingStarted());
+        // 11 june - проверка отсутсвия остановки процесса индексации - корректное завершение
+        if(!isIndexingStopped)
+        {
+            //
+            try
+            {
+                Thread.sleep(5000);
+            } catch (InterruptedException e)
+                {
+                    System.err.println("В классе RCP в if(!isIndexingStopped) сработал InterruptedException(e) ///1 " + e.getMessage() +
+                            " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() +
+                            " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass());
+                }
+            //
+
+            indexingService.setIndexingStarted(false);
+            System.out.println("\nВыполнена проверка if(!isIndexingStopped) после завершения цикла итерации future метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() +
+                            "\nЗначение локальной переменной класса RCP isIndexingStopped: " + isIndexingStopped +
+                    "\nЗначение флажковой переменной класса isIndexingStarted: " + indexingService.getIndexingStarted());
+        }
+        //
+
+//        indexingService.setIndexingStarted(false);  //1
+        System.out.println("\nЗавершение метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() +
+                " - Значение переменной isIndexingStarted: " + indexingService.getIndexingStarted());
     }
 }
 
