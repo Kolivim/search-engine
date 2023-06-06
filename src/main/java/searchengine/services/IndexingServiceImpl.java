@@ -29,7 +29,8 @@ public class IndexingServiceImpl implements IndexingService
     boolean isIndexingStarted = false;
     private final SitesList sites;
     ResultCheckerParse resultCheckerExample;    //1
-    Stack<RunnableFuture<Boolean>> taskList = new Stack<>(); //29
+    Stack<RunnableFuture<Boolean>> taskList = new Stack<>(); // 29
+    List<StartIndexing> listStartIndexing = new ArrayList<>(); //    5.06
     ExecutorService executor;   //29
 
     @Override
@@ -78,9 +79,18 @@ public class IndexingServiceImpl implements IndexingService
 //                throw new RuntimeException(e);
 //            }
 
-//            /*
+            /* Рабочий!!!
             //Вар.1
             RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
+            taskList.add(futureValue);
+            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
+            */
+
+            //            /*
+            //Вар.3
+            StartIndexing value = new StartIndexing(siteDB);
+            RunnableFuture<Boolean> futureValue = new FutureTask<>(value);
+            listStartIndexing.add(value);
             taskList.add(futureValue);
             System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
 //            */
@@ -122,11 +132,37 @@ public class IndexingServiceImpl implements IndexingService
         System.out.println("\nЗапущен метод stopIndexing в классе IndexingServiceImpl");
         if(isIndexingStarted)
             {
+
+                // Блок на пробу с присвоением indexSt pagewriter от SiteDB status
+                Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
+
+               /*
+                for (searchengine.model.Site siteDB : siteIterable)
+                {
+                    if(siteDB.getStatus().equals(StatusType.INDEXING))
+                    {
+                        siteDB.setStatus(StatusType.FAILED);
+                        siteRepository.save(siteDB);
+                        System.out.println("\nIndexingServiceImpl Выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
+                    }
+                }
+                */
+
+                //
                 resultCheckerExample.setIndexingStopped(true);
+                //
+                for (StartIndexing value : listStartIndexing)
+                {
+                    value.cancel();
+                }  //  5.06
+                //
+
+
                 System.out.println("\nВыполнена передача значения true сеттеру setIndexingStopped");
                 List<Runnable> notExecuted = executor.shutdownNow();
                 System.out.println("\nЛист невыполненных задач: " + notExecuted);
                 isIndexingStarted = false;
+                System.out.println("\nВыполнено присвоение  isIndexingStarted значения: " + isIndexingStarted);
                 return true;
             } else {return false;}
     }
