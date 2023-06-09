@@ -45,9 +45,7 @@ public class Page //implements Auditable // implements Serializable
 
 //    @Version
 //    @Access(AccessType.PROPERTY)
-    @Column(columnDefinition = "TEXT NOT NULL, Index (path(512))"
-//            , nullable = false
-    )
+    @Column(columnDefinition = "TEXT NOT NULL, Index (path(512))" /*, nullable = false*/)
     private String path;
     @Column(nullable = false)
     private int code;
@@ -67,7 +65,8 @@ public class Page //implements Auditable // implements Serializable
     private Site site;
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "Page{" +
                 "id=" + id +
                 ", siteId=" + siteId +

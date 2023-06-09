@@ -34,6 +34,19 @@ public interface PageRepository extends CrudRepository<Page, Integer>
                 // So spring : @Transactional ???
         Optional<Page> findByPathAndSite(String path, Site site);
 
+//        @Retryable(backoff = @Backoff(delay = 1, maxDelay = 100, random = true))
+//        @Transactional
+//        @Lock(value = LockModeType.OPTIMISTIC)
+
+        boolean existsByPath(String path);
+
+//        @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+//        @Lock(LockModeType.PESSIMISTIC_READ)          // no transaction is in progress; nested exception is javax.persistence.TransactionRequiredException: no transaction is in progress
+        boolean existsByPathAndSite(String path, Site site);
+}
+
+
+
 //        Optional<Page> findByPathAndSiteIdForUpdate(String path, Integer siteId);
 
 
@@ -41,17 +54,12 @@ public interface PageRepository extends CrudRepository<Page, Integer>
 
 //        Page findByPath(String path);
 
-//        @Retryable(backoff = @Backoff(delay = 1, maxDelay = 100, random = true))
-//        @Transactional
-//        @Lock(value = LockModeType.OPTIMISTIC)
 
-        boolean existsByPath(String path);
 
-//        boolean existsByPathToShare(String path);
+//        @Query("select e from Employees e where e.salary > :salary")
+////        List<Employees> findEmployeesWithMoreThanSalary(@Param("salary") Long salary, Sort sort);
 
-//        @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
-//        @Lock(LockModeType.PESSIMISTIC_READ)          // no transaction is in progress; nested exception is javax.persistence.TransactionRequiredException: no transaction is in progress
-        boolean existsByPathAndSite(String path, Site site);
+
 
 //        boolean existsByPathAndSiteForUpdate(String path, Site site);
 
@@ -65,14 +73,4 @@ public interface PageRepository extends CrudRepository<Page, Integer>
 
 
 
-
-
-
-
-
-//        @Query("select e from Employees e where e.salary > :salary")
-//        List<Employees> findEmployeesWithMoreThanSalary(@Param("salary") Long salary, Sort sort);
-
-
-
-}
+//        boolean existsByPathToShare(String path);
