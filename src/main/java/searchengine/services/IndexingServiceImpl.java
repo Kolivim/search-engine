@@ -161,7 +161,6 @@ public class IndexingServiceImpl implements IndexingService
                 }  //  5.06
                 //
 
-
                 System.out.println("\nВыполнена передача значения true сеттеру setIndexingStopped");
                 List<Runnable> notExecuted = executor.shutdownNow();
                 System.out.println("\nЛист невыполненных задач: " + notExecuted);

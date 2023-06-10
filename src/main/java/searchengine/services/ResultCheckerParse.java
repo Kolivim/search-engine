@@ -12,22 +12,22 @@ import java.util.concurrent.RunnableFuture;
 
 public class ResultCheckerParse implements Runnable
 {
-//    private final List<RunnableFuture<Boolean>> runnableFutureList;
     private final Stack<RunnableFuture<Boolean>> runnableFutureList;
-    private boolean isIndexingStopped;  //1
-    public void setIndexingStopped(boolean indexingStopped) {this.isIndexingStopped = indexingStopped;}  //1
-    public boolean isIndexingStopped() {return isIndexingStopped;}  //1
     private IndexingService indexingService; //1
-    public ResultCheckerParse(
-//                                List<RunnableFuture<Boolean>> runnableFutureList
-                                Stack<RunnableFuture<Boolean>> runnableFutureList
-                                )
+    private boolean isIndexingStopped;  //1
+
+    public boolean isIndexingStopped() {return isIndexingStopped;}  //1
+
+    public void setIndexingStopped(boolean indexingStopped) {this.isIndexingStopped = indexingStopped;}  //1
+
+    public ResultCheckerParse(/*List<RunnableFuture<Boolean>> runnableFutureList */ Stack<RunnableFuture<Boolean>> runnableFutureList)
     {
-//        this.runnableFutureList = (Stack<RunnableFuture<Boolean>>)SpringUtils.ctx.getBean("taskList", IndexingService.class);
-                this.runnableFutureList = runnableFutureList;
-//        this.isIndexingStopped = false;  //1
         this.indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingService.class);    //1
+        this.runnableFutureList = runnableFutureList;
+//        this.isIndexingStopped = false;  //1
+//        this.runnableFutureList = (Stack<RunnableFuture<Boolean>>)SpringUtils.ctx.getBean("taskList", IndexingService.class);
     }
+
     @Override
     public void run()
     {
@@ -60,3 +60,8 @@ public class ResultCheckerParse implements Runnable
         System.out.println("\nЗавершение метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() + "\nЗначение переменной isIndexingStarted: " + indexingService.getIndexingStarted());
     }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//    private final List<RunnableFuture<Boolean>> runnableFutureList;

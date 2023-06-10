@@ -12,12 +12,13 @@ import java.util.concurrent.ForkJoinPool;
 public class StartIndexing implements Callable<Boolean>
 {
     private SiteRepository siteRepository;
-    Site siteDB;
+    private Site siteDB;    // p
+    private ForkJoinPool forkJoinPool = new ForkJoinPool(); // p
+
     public StartIndexing(Site siteDB)
     {
         this.siteDB = siteDB;
     }
-    ForkJoinPool forkJoinPool = new ForkJoinPool(); // 31
 
     @Override
     public Boolean call() throws Exception
@@ -46,8 +47,7 @@ public class StartIndexing implements Callable<Boolean>
 
     public void cancel()
     {
-//        interrupt();
         forkJoinPool.shutdownNow();
-        System.out.println("Вызван метод cancel() в классе StartIndexing");
+        System.out.println("Вызван метод cancel() в классе StartIndexing"); // *
     }
 }

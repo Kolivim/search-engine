@@ -59,7 +59,7 @@ public class PageWriter extends RecursiveAction
     private Site site;
     private volatile boolean indexingStarted;
     private volatile boolean isIndexingSiteStarted;
-    private ReadWriteLock lock = new ReentrantReadWriteLock();
+    ReadWriteLock lock = new ReentrantReadWriteLock();
 //    private volatile Page pageFind; // Убрать!!!
     ReentrantLock isLock = new ReentrantLock();
     String linkAbs = "";
