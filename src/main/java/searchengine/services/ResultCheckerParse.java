@@ -31,7 +31,7 @@ public class ResultCheckerParse implements Runnable
     @Override
     public void run()
     {
-            while (runnableFutureList.size() != 0)    // while с проверкой условий по остановке потока - т.е. завершению всех задач
+        while (runnableFutureList.size() != 0)    // while с проверкой условий по остановке потока - т.е. завершению всех задач
             {
                 for (Iterator<RunnableFuture<Boolean>> futureIterator = runnableFutureList.iterator(); futureIterator.hasNext(); ) {
                     RunnableFuture<Boolean> future = futureIterator.next();
@@ -55,8 +55,8 @@ public class ResultCheckerParse implements Runnable
                     }
                 }
             }
-            indexingService.setIndexingStarted(false);  //1
 
-        System.out.println("\nЗавершение метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() + "\n");
+        indexingService.setIndexingStarted(false);  //1
+        System.out.println("\nЗавершение метода run() класса ResultCheckerParse, runnableFutureList.size()=" + runnableFutureList.size() + "\nЗначение переменной isIndexingStarted: " + indexingService.getIndexingStarted());
     }
 }

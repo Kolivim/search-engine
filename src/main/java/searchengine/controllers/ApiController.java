@@ -48,25 +48,14 @@ public class ApiController {
     @GetMapping(value = "/startIndexing"                            // Переписать аналогично StopIndexing()
 //            , produces = MediaType.APPLICATION_JSON_VALUE
                 )
-    public ResponseEntity<Map<String,String>> startIndexing() {
+    public ResponseEntity<Map<String,String>> startIndexing()
+    {
         StatisticsResponse response = statisticsService.getStatistics();    // Убрать м.б.?
-//        response.setResult(false); // Для проверки
-        if (//response.isResult()
-            !indexingService.getIndexingStarted()
-                )
-        {
-            // TODO: some code for start indexing
-            indexingService.startIndexing();
-            //
-            messageList.put("result", "true");
-            return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
-        }
-            else
-                {
-                    messageList.put("result", "false");
-                    messageList.put("error", "Индексация уже запущена");
-                    return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(505));
-                }
+        boolean isIndexing = indexingService.startIndexing();
+        if (isIndexing)
+            {return messageService.startIndexingOk();}
+                else
+                    {return messageService.startIndexingError();}
     }
 
     @GetMapping(value = "/stopIndexing")
@@ -117,3 +106,32 @@ public class ApiController {
 ////        }
 ////        return message;
 ////    }
+
+
+
+/*
+    /// My ///
+    @GetMapping(value = "/startIndexing"                            // Переписать аналогично StopIndexing()
+//            , produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<Map<String,String>> startIndexing() {
+        StatisticsResponse response = statisticsService.getStatistics();    // Убрать м.б.?
+//        response.setResult(false); // Для проверки
+        if (//response.isResult()
+                !indexingService.getIndexingStarted()
+        )
+        {
+            // TODO: some code for start indexing
+            indexingService.startIndexing();
+            //
+            messageList.put("result", "true");
+            return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
+        }
+        else
+        {
+            messageList.put("result", "false");
+            messageList.put("error", "Индексация уже запущена");
+            return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(505));
+        }
+    }
+    */
