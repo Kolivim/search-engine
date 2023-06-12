@@ -238,17 +238,18 @@ public class PageWriter extends RecursiveAction {
     protected void compute()
     {
         //
-        if(Thread.currentThread().isInterrupted()) {
-            try {
-                throw new InterruptedException();
-            } catch (InterruptedException e)
+        if(Thread.currentThread().isInterrupted())
             {
-//                System.err.println("PW catch in if Compute: " + page.getPath());  //*
-                site.setStatus(StatusType.FAILED);
-                siteRepository.save(site);
-                System.err.println("PW catch in if Compute: " + page.getPath() + " - Выполнено изменение статуса сайта: " + site.getUrl() + " , на: " + site.getStatus());
+                try {
+                    throw new InterruptedException();
+                } catch (InterruptedException e)
+                {
+    //                System.err.println("PW catch in if Compute: " + page.getPath());  //*
+                    site.setStatus(StatusType.FAILED);
+                    siteRepository.save(site);
+                    System.err.println("PW catch in if Compute: " + page.getPath() + " - Выполнено изменение статуса сайта: " + site.getUrl() + " , на: " + site.getStatus());
+                }
             }
-        }
         //
 
         isIndexingSiteStarted = indexingService.getIndexingStarted();
@@ -260,11 +261,16 @@ public class PageWriter extends RecursiveAction {
             List<PageWriter> pageWriterList = new ArrayList<>();
             try {
                 Thread.sleep(1500);
+
+                // Удалить - неиспользуемое ???
                 String path = page.getPath();
-                if (path == null || path == "/") {
-                    path = "";
-                }
+                if (path == null || path == "/")
+                    {
+                        path = "";
+                    }
 //                String requestedPage = page.getSite().getUrl() + path;
+                //
+
                 String requestedPage = linkAbs;
 
 //                Document pageLink = Jsoup.connect(requestedPage)
@@ -277,61 +283,57 @@ public class PageWriter extends RecursiveAction {
 
                 Elements fullLinks = pageLink.select("a[href]");
                 for (Element valueLink : fullLinks)
-                {
-                    String linkAU = valueLink.absUrl("href");
-                    String link = valueLink.attr("href");
-
-                    // TODO: Облагородить проверку и изменение link:
-                    // 09.06
-                    String linkSite = site.getUrl();
-                    String linkSite2 = site.getUrl().replaceFirst("www.", "");
-                    if (link.contains(linkSite))
                     {
-                        link = link.replaceFirst(linkSite, ""); // Исправить на "Начинается с _" - public boolean startsWith(String prefix)
-//                    System.out.println("Сработал метод замены path для страницы: " + linkAU + " , итоговый link: " + link);   // *
+                        String linkAU = valueLink.absUrl("href");
+                        String link = valueLink.attr("href");
+
+                        // TODO: Облагородить проверку и изменение link:
+                        // 09.06
+                        String linkSite = site.getUrl();
+                        String linkSite2 = site.getUrl().replaceFirst("www.", "");
+                        if (link.contains(linkSite))
+                            {
+                                link = link.replaceFirst(linkSite, ""); // Исправить на "Начинается с _" - public boolean startsWith(String prefix)
+        //                    System.out.println("Сработал метод замены path для страницы: " + linkAU + " , итоговый link: " + link);   // *
+                            }
+                        if (link.contains(linkSite2))
+                            {
+                                link = link.replaceFirst(linkSite2, ""); // Исправить на "Начинается с _" - public boolean startsWith(String prefix)
+        //                        System.out.println("Сработал метод замены path для страницы: " + linkAU + " , итоговый link: " + link);   // *
+                            }
+                        //
+
+                        boolean isChildren = isChildren(linkAU, requestedPage);
+    //                    boolean isNotFindPage2 = !pageRepository.existsByPath(link);    // Убрать !!!
+                        boolean isNotFindPage3 = !pageRepository.existsByPathAndSite(link, site);
+
+    //                    isLock.lock();
+    //                    try {
+
+                        indexingStarted = !pageRepository.existsByPathAndSite(link, site);
+
+                        lock.readLock().lock();
+    //                    synchronized (link)
+    //                    {
+                        if (isIndexingSiteStarted&indexingStarted & isNotFindPageRead(link, site) & isNotFindPage3 /*& isNotFindPage2 & isNotFindPage*/
+                                & isLink(linkAU) & isChildren
+                                & !Thread.currentThread().isInterrupted())
+                            {
+                                Page pageValues = addPage(link, linkAU); // ???
+        //                        if (pageValues != null) {
+                                if (pageValues.getId() != -1)
+                                    {
+            //                          site.addPage(pageValues); // Проверить в debug - из-за этого дубли в page появляются
+                                        site.setStatusTime(new Date());
+                                        siteRepository.save(site);
+                                        PageWriter pageWriter = new PageWriter(pageValues, linkAU);
+                                        pageWriter.fork();
+                                        pageWriterList.add(pageWriter);
+                                    }
+
+                            } else{}
+                        lock.readLock().unlock();
                     }
-                    if (link.contains(linkSite2))
-                    {
-                        link = link.replaceFirst(linkSite2, ""); // Исправить на "Начинается с _" - public boolean startsWith(String prefix)
-//                        System.out.println("Сработал метод замены path для страницы: " + linkAU + " , итоговый link: " + link);   // *
-                    }
-                    //
-
-                    boolean isChildren = isChildren(linkAU, requestedPage);
-//                    boolean isNotFindPage2 = !pageRepository.existsByPath(link);    // Убрать !!!
-                    boolean isNotFindPage3 = !pageRepository.existsByPathAndSite(link, site);
-
-//                    isLock.lock();
-//                    try {
-
-                    indexingStarted = !pageRepository.existsByPathAndSite(link, site);
-
-                    lock.readLock().lock();
-//                    synchronized (link)
-//                    {
-                    if (isIndexingSiteStarted&indexingStarted & isNotFindPageRead(link, site) & isNotFindPage3
-//                                & isNotFindPage2 & isNotFindPage
-                            & isLink(linkAU) & isChildren
-                            & !Thread.currentThread().isInterrupted())
-                    {
-                        Page pageValues = addPage(link, linkAU); // ???
-                        if (pageValues != null) {
-//                          site.addPage(pageValues); // Проверить в debug - из-за этого дубли в page появляются
-                            site.setStatusTime(new Date());
-                            siteRepository.save(site);
-                            PageWriter pageWriter = new PageWriter(pageValues, linkAU);
-
-
-                            pageWriter.fork();
-                            pageWriterList.add(pageWriter);
-
-                        }
-
-                    } else
-                    {
-                    }
-                    lock.readLock().unlock();
-                }
 
                 if(Thread.currentThread().isInterrupted()) // ???
                     {    // ???
