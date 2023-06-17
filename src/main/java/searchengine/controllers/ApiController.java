@@ -2,12 +2,12 @@ package searchengine.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import searchengine.dto.statistics.ErrorMessage;
 import searchengine.dto.statistics.StatisticsResponse;
+import searchengine.model.Page;
 import searchengine.services.*;
 
 import java.util.Map;
@@ -29,6 +29,7 @@ public class ApiController {
     private Map<String,String> messageList = new TreeMap<>();   // My - Убрать после переписи StartIndexing()
     private final IndexingService indexingService;  // My
     private final StatisticsService statisticsService;
+
 
     public ApiController(IndexingService indexingService, StatisticsService statisticsService)
     {
@@ -68,6 +69,14 @@ public class ApiController {
                 else
                     {return messageService.stopIndexingError();}
     }
+
+    @PostMapping(value = "/indexPage", consumes = {MediaType.APPLICATION_JSON_VALUE})   // TODO: Переписать метод
+    public ResponseEntity<Map<String,String>> indexPage(@RequestBody String path)
+    {
+        boolean isMissingPageInRage = indexingService.stopIndexing();
+        return ResponseEntity.status(HttpStatus.CREATED).body(null);
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
