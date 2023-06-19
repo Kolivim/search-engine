@@ -29,12 +29,13 @@ public class ApiController {
     private Map<String,String> messageList = new TreeMap<>();   // My - Убрать после переписи StartIndexing()
     private final IndexingService indexingService;  // My
     private final StatisticsService statisticsService;
+    private final LemmatizationService lemmatizationService; // LEMMA STAGE
 
-
-    public ApiController(IndexingService indexingService, StatisticsService statisticsService)
+    public ApiController(IndexingService indexingService, StatisticsService statisticsService, LemmatizationService lemmatizationService)
     {
         this.indexingService = indexingService; // My
         this.statisticsService = statisticsService;
+        this.lemmatizationService = lemmatizationService; // LEMMA STAGE
     }
 
 
@@ -70,17 +71,30 @@ public class ApiController {
                     {return messageService.stopIndexingError();}
     }
 
-    @PostMapping(value = "/indexPage", consumes = {MediaType.APPLICATION_JSON_VALUE})   // TODO: Переписать метод
-    public ResponseEntity<Map<String,String>> indexPage(@RequestBody String path)
+    @PostMapping(value = "/indexPage", consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE}/*, consumes = {MediaType.APPLICATION_JSON_VALUE}*//*, produces = "application/json;charset=UTF-8"*/)   // TODO: Проверить метод !!!
+    public ResponseEntity<Map<String,String>> indexPage(@RequestParam Map<String, String> map)   // String url
     {
-        boolean isMissingPageInRage = indexingService.stopIndexing();
-        return ResponseEntity.status(HttpStatus.CREATED).body(null);
+        String url = map.get("url");
+        boolean isExistPage = lemmatizationService.indexPage(url);
+        if (isExistPage)
+            {return messageService.indexPageOk();}
+                else
+                    {return messageService.indexPageError();}
     }
 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//    @PostMapping(value = "/indexPage/{path}", consumes = {MediaType.APPLICATION_JSON_VALUE})   // TODO: Проверить метод !!!
+//    public ResponseEntity<Map<String,String>> indexPage(@PathVariable String path)
+//    {
+//        boolean isExistPage = lemmatizationService.indexPage(path);
+//        if (isExistPage)
+//        {return messageService.indexPageOk();}
+//        else
+//        {return messageService.indexPageError();}
+//    }
 
 
 //    public ResponseEntity<ErrorMessage> startIndexing(){
@@ -133,7 +147,7 @@ public class ApiController {
                 !indexingService.getIndexingStarted()
         )
         {
-            // TODO: some code for start indexing
+            //
             indexingService.startIndexing();
             //
             messageList.put("result", "true");

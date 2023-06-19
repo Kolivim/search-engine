@@ -4,6 +4,6 @@ import java.util.HashMap;
 
 public interface LemmatizationService
 {
-    public boolean indexPage();
+    public boolean indexPage(String path);
 
 }

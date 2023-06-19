@@ -18,6 +18,8 @@ import searchengine.model.Site;
 
 import javax.persistence.LockModeType;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 
 public class TestValue
@@ -71,8 +73,31 @@ public class TestValue
         */
         //
 
+        /*
         String html = getPageHTML();
         getClearHTML(html);
+        */
+
+        String path = "https://skillbox.ru/otzyvy/";
+        HashMap<String, String> pathInfo = new HashMap<String, String>();
+        try
+        {
+            URL url = new URL(path);
+            pathInfo.put("pagePath", url.getPath());
+            String siteURL = url.getProtocol();
+            siteURL = siteURL + "://";
+            siteURL = siteURL + url.getHost();
+            pathInfo.put("siteUrl", siteURL);
+            System.out.println(pathInfo);  // *
+
+            String pagePath = pathInfo.get("pagePath");
+            String siteUrl = pathInfo.get("siteUrl");
+            System.out.println(url + " - siteUrl: " + siteUrl + " , pagePath: " + pagePath);  // *
+
+        } catch (MalformedURLException e)
+        {
+            System.err.println("В классе LSImpl методе indexPage сработал MalformedURLException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданной странице:  " + path);
+        }
 
         }
 

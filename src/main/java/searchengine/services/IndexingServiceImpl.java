@@ -30,7 +30,8 @@ public class IndexingServiceImpl implements IndexingService
     public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites)
     {
         this.sites = sites;
-        this.siteRepository = siteRepository;this.pageRepository = pageRepository;
+        this.siteRepository = siteRepository;
+        this.pageRepository = pageRepository;
 //        this.startIndexing = startIndexing;
     }
 

@@ -57,6 +57,7 @@ public class PageWriter extends RecursiveAction {
     private SiteRepository siteRepository;
     IndexingService indexingService;
     private Page page;
+
     private Site site;
     String linkAbs = "";
     private volatile boolean indexingStarted;
@@ -64,6 +65,7 @@ public class PageWriter extends RecursiveAction {
     private ReadWriteLock lock = new ReentrantReadWriteLock();  // public ???
     private volatile Page pageFind;
     ReentrantLock isLock = new ReentrantLock();
+    private boolean isForcedPageIndexing = false;
     // TODO: Убрать в _.yaml
     public static final String USER_AGENT1  = "Mozilla/5.0 (compatible; MJ12bot/v1.4.5; http://www.majestic12.co.uk/bot.php?+)";
     public static final String USER_AGENT2 = "Microsoft Edge (Win 10 x64): Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586";
@@ -72,6 +74,7 @@ public class PageWriter extends RecursiveAction {
     public static final String USER_AGENT5 = "Microsoft Edge (Win 10 x64): Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586";
     //
     public static final String USER_AGENT = USER_AGENT3;
+    public void setSite(Site site) {this.site = site;}
     public PageWriter(Site site) throws IOException
     {
         this.site = site;
@@ -103,6 +106,61 @@ public class PageWriter extends RecursiveAction {
         pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
         indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
+    }
+
+    // Заменил на void removeOrAddPage
+    public Integer removePage(String pagePath, String linkAU, Site site)   // TODO: Нужна ли проверка на остановку индексации ???
+    {
+        pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
+        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
+        indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
+
+        pageRepository.deleteByPathAndSite(pagePath, site);
+        try {
+            Page removedPage = addPage(pagePath, linkAU);
+            return page.getId();
+            } catch (IOException e)
+                {
+                    System.err.println("В классе PageWriter в методе removePage сработал IOException / RuntimeException(e) ///1 " + e.getMessage() +
+                            " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() +
+                            " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданном адресе:  " + pagePath +
+                            " ///8 сайта:  " + site.getUrl());
+                }
+        return -1; // Передача в случае ошибки в try/catch
+    }
+    //
+
+    public Integer removeOrAddPage(String pagePath, String linkAU, Site site)   // TODO: Нужна ли проверка на остановку индексации ???
+    {
+        pageRepository = (PageRepository) SpringUtils.ctx.getBean(PageRepository.class);
+        siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
+        indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
+        this.site = site;
+        this.isForcedPageIndexing = true;
+
+        if(pageRepository.existsByPathAndSite(pagePath, site))
+        {
+            Page deletePage = pageRepository.findByPathAndSite(pagePath, site);
+            pageRepository.delete(deletePage);
+//            pageRepository.deleteByPathAndSite(pagePath, site);
+//            pageRepository.deleteByPathAndSiteId(pagePath, site.getId());
+        }
+
+        try {
+                Page removedPage = addPage(pagePath, linkAU);
+                System.out.println("Для переданного пути: " + linkAU + " - пройден верно метод removeOrAddPage, pageId = " + removedPage.getId()); //*
+                isForcedPageIndexing = false;
+                return removedPage.getId();
+
+            } catch (IOException e)
+                {
+                    System.err.println("В классе PageWriter в методе removePage сработал IOException / RuntimeException(e) ///1 " + e.getMessage() +
+                            " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() +
+                            " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданном адресе:  " + pagePath +
+                            " ///8 сайта:  " + site.getUrl());
+                }
+        System.out.println("Для переданного пути: " + linkAU + " - пройден неправильно метод removeOrAddPage, pageId = ???"); //*
+        return -1; // Передача в случае ошибки в try/catch
     }
 
     public boolean isLink(String valueUrl) {
@@ -179,11 +237,9 @@ public class PageWriter extends RecursiveAction {
 
     //    @EnableTransactionManagement
     @Lock(value = LockModeType.OPTIMISTIC_FORCE_INCREMENT)
-    @Transactional (
-//                    transactionManager = "entityManagerFactoryT",
+    @Transactional (/*transactionManager = "entityManagerFactoryT",*/
             propagation = Propagation.REQUIRED,
-            isolation = Isolation.SERIALIZABLE
-    )
+            isolation = Isolation.SERIALIZABLE)
     public Page addPage(String link, String linkAU) throws IOException
 //    public synchronized Page addPage(String link, String linkAU) throws IOException
     {
@@ -205,6 +261,11 @@ public class PageWriter extends RecursiveAction {
 
         boolean tx = TransactionSynchronizationManager.isActualTransactionActive();
         isIndexingSiteStarted = indexingService.getIndexingStarted();
+
+        // Добавленный блок для принудительной индексации страницы:
+        if (isForcedPageIndexing)
+            {isIndexingSiteStarted = isForcedPageIndexing;}
+        //
 
         if (!pageRepository.existsByPathAndSite(link, site) & isIndexingSiteStarted )
         {

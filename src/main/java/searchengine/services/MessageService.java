@@ -42,4 +42,19 @@ public class MessageService
         return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(505));
     }
 
+    public ResponseEntity<Map<String,String>> indexPageOk()
+    {
+        messageList.clear();
+        messageList.put("result", "true");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
+    }
+
+    public ResponseEntity<Map<String,String>> indexPageError()
+    {
+        messageList.clear();
+        messageList.put("result", "false");
+        messageList.put("error", "Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(503));
+    }
+
 }

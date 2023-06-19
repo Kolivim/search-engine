@@ -32,7 +32,7 @@ public interface PageRepository extends CrudRepository<Page, Integer>
 //        @Lock(value = LockModeType.OPTIMISTIC)
 //        @Transactional
                 // So spring : @Transactional ???
-        Optional<Page> findByPathAndSite(String path, Site site);
+//        Optional<Page> findByPathAndSite(String path, Site site);
 
 //        @Retryable(backoff = @Backoff(delay = 1, maxDelay = 100, random = true))
 //        @Transactional
@@ -43,6 +43,13 @@ public interface PageRepository extends CrudRepository<Page, Integer>
 //        @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
 //        @Lock(LockModeType.PESSIMISTIC_READ)          // no transaction is in progress; nested exception is javax.persistence.TransactionRequiredException: no transaction is in progress
         boolean existsByPathAndSite(String path, Site site);
+
+        boolean existsByPathAndSiteId(String path, int siteId);
+
+        void deleteByPathAndSite(String path, Site site);
+        void deleteByPathAndSiteId(String path, int siteId);
+
+        Page findByPathAndSite(String path, Site site);
 }
 
 
