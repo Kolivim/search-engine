@@ -26,4 +26,27 @@ public class Index
     @Column(name = "\"rank\"", nullable = false)
     private float rank;
 
+    public Index(int pageId, int lemmaId, float rank)
+    {
+        this.pageId = pageId;
+        this.lemmaId = lemmaId;
+        this.rank = rank;
+    }
+
+    public void frequencyIndexIncr()
+    {
+        this.rank++;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Index:[" +
+                " id = " + id +
+                ", pageId = " + pageId +
+                ", lemmaId = " + lemmaId +
+                ", rank = " + rank +
+                " ]";
+    }
+
 }

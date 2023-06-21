@@ -9,6 +9,9 @@ import org.jsoup.safety.Safelist;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
+import searchengine.model.Index;
+import searchengine.model.Lemma;
+import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
@@ -21,16 +24,24 @@ public class LemmatizationServiceImpl implements LemmatizationService
 {
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
 
     private String[] servicePartsText = {"ПРЕДЛ", "МЕЖД", "СОЮЗ"};
     private HashMap<String, Integer> lemmasText = new HashMap<String, Integer>();
     private LuceneMorphology luceneMorph = new RussianLuceneMorphology();   // TODO: После отладки вынести в класс !!! M
     @Autowired
-    public LemmatizationServiceImpl(PageRepository pageRepository, SiteRepository siteRepository) throws IOException
+    public LemmatizationServiceImpl(PageRepository pageRepository, SiteRepository siteRepository,
+                                    LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException
     {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
-    }  // TODO: После отладки вынести в класс !!! M
+
+        // 19 june:
+        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
+        //
+    }
 
     @Override
     public boolean indexPage(String path)
@@ -50,9 +61,11 @@ public class LemmatizationServiceImpl implements LemmatizationService
             //
 
             PageWriter removedPage = new PageWriter();
-            Integer pageId = removedPage.removeOrAddPage(pagePath, path, site);
+//            Integer pageId = removedPage.removedOrAddPage(pagePath, path, site);
+            Page page = removedPage.removedOrAddPage(pagePath, path, site);
+            Integer pageId = page.getId();
             // TODO: Здесь добавляем данные в index и lemma
-
+            addLemmas(page);
             //
             System.out.println(path + " : В классе LSImpl завершение метода indexPage, новый pageId = " + pageId + " , для пути: " + path);// *
             return true;
@@ -60,23 +73,64 @@ public class LemmatizationServiceImpl implements LemmatizationService
         }  else
             {
                 System.out.println(path + " : В классе LSImpl в методе indexPage вход в метод после false в проверке if на существование сайта"); // *
-                System.out.println(path + " : Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
+                System.out.println(path + " : Данная страница находится за пределами сайтов, указанных в конфигурационном файле"); // *
                 return false;
             }
     }
 
-    public boolean indexPageAndSite(String path)
+    @Override
+    public void indexNewPage(Page page)
     {
-        HashMap<String, String> pathInfo = getPathAndSiteUrl(path);
-        String pagePath = pathInfo.get("pagePath");
-        String siteUrl = pathInfo.get("siteUrl");
-        Site site = siteRepository.findByUrl(siteUrl);
-        Integer siteId = site.getId();
-        if(pageRepository.existsByPathAndSiteId(pagePath, siteId))
-        {
-            System.out.println("В классе LSImpl в методе indexPage вход в метод после проверки if на существование страницы и сайта");
-            return true;
-        } else {return false;}
+            addLemmas(page);
+            System.out.println(page + " : В классе LSImpl в методе indexNewPage завершение метода"); // *
+
+    }
+
+    private void addLemmas(Page indexingPage)
+    {
+        try
+            {
+                HashMap<String, Integer> splitLemmasText = splitLemmasText(getClearHTML(indexingPage.getContent()));
+                // Перебираем HashMap и добавляем Lemma, проверяя наличие lemma по site
+                for(String lemma : splitLemmasText.keySet())
+                    {
+                        Lemma savedLemma;
+                        Optional lemmaOptional = lemmaRepository.findByLemmaAndSiteId(lemma, indexingPage.getSiteId());
+                        if(lemmaOptional.isPresent())
+                        {
+                            savedLemma = (Lemma) lemmaOptional.get();
+                            savedLemma.frequencyLemmaIncr();
+                        } else
+                            {
+                                savedLemma = new Lemma(indexingPage.getSiteId(), lemma, 1);
+                            }
+                        System.out.println("В классе LSImpl методе addLemmas к сохранению получена savedLemma: " + savedLemma); // *
+                        lemmaRepository.save(savedLemma);
+
+                        // Добавление index в таблицу index:
+                        Index savedIndex = new Index(indexingPage.getId(), savedLemma.getId(), splitLemmasText.get(lemma));
+                        System.out.println("В классе LSImpl методе addLemmas к сохранению получена savedIndex: " + savedIndex); // *
+                        indexRepository.save(savedIndex);
+                        //
+
+                        /* TODO: Проверки по идее не нужны, т.к. каждую страницу индексиреум целиком ???
+                        Optional indexOptional = indexRepository.findByPageIdAndLemmaId(indexingPage.getId(), savedLemma.getId());  // .orElseGet(() -> pageRepository.save(new Page));
+                        if(indexOptional.isPresent())
+                        {
+                            savedIndex = (Index) indexOptional.get();
+                            savedIndex.frequencyIndexIncr();
+                        } else
+                        {
+                            savedIndex = new Index(indexingPage.getId(), savedLemma.getId(), 1);
+                        }
+                        */
+
+                    }
+                //
+            } catch (IOException e)
+                {
+                    System.err.println("В классе LSImpl методе addLemmas сработал IOException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass());
+                }
     }
 
     private HashMap<String, String> getPathAndSiteUrl(String path)
@@ -95,7 +149,6 @@ public class LemmatizationServiceImpl implements LemmatizationService
         {
             System.err.println("В классе LSImpl методе indexPage сработал MalformedURLException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданной странице:  " + path);
         }
-
         return pathInfo;
     }
 
@@ -165,9 +218,35 @@ public class LemmatizationServiceImpl implements LemmatizationService
         System.out.println(clearPage);
         return clearPage;
     }
+
+    public boolean indexPageAndSite(String path)
+    {
+        HashMap<String, String> pathInfo = getPathAndSiteUrl(path);
+        String pagePath = pathInfo.get("pagePath");
+        String siteUrl = pathInfo.get("siteUrl");
+        Site site = siteRepository.findByUrl(siteUrl);
+        Integer siteId = site.getId();
+        if(pageRepository.existsByPathAndSiteId(pagePath, siteId))
+        {
+            System.out.println("В классе LSImpl в методе indexPage вход в метод после проверки if на существование страницы и сайта");
+            return true;
+        } else {return false;}
+    }
+
 }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            // pageRepository.findById(id).orElseGet(() -> pageRepository.save(new Page));
+
+
+
+        //    private void addIndex(Page indexingPage)
+        //    {
+        //
+        //    }
+
+
 
             /* Вынес в PageWriter:
             if(pageRepository.existsByPathAndSiteId(pagePath, siteId))
