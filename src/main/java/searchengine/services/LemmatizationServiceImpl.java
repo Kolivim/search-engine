@@ -57,16 +57,22 @@ public class LemmatizationServiceImpl implements LemmatizationService
             Integer siteId = site.getId();
 
             // TODO: Здесь удаляем данные в index и после нее в lemma
+//            Page deletedPage = pageRepository.findByPathAndSite(pagePath, site);//            List<Index> deletedIndexes = indexRepository.findAllByPageId(deletedPage.getId());//            System.out.println("В классе LSImpl в методе indexPage к удалению следующие Index: " + deletedIndexes); // *//            for(Index deletedIndex : deletedIndexes)//                {//                    indexRepository.delete(deletedIndex);//                }
+            List<Integer> deletesLemmaId = deleteIndexes(pagePath, site);
+            //
 
+            //  TODO: Здесь удаляем в lemma (после index!!!)
+            deleteLemmaOnPage(deletesLemmaId, site);
             //
 
             PageWriter removedPage = new PageWriter();
-//            Integer pageId = removedPage.removedOrAddPage(pagePath, path, site);
             Page page = removedPage.removedOrAddPage(pagePath, path, site);
             Integer pageId = page.getId();
+
             // TODO: Здесь добавляем данные в index и lemma
-            addLemmas(page);
+//            addLemmas(page); // По идее в ___Page page = removedPage.removedOrAddPage(pagePath, path, site)___ добавляется
             //
+
             System.out.println(path + " : В классе LSImpl завершение метода indexPage, новый pageId = " + pageId + " , для пути: " + path);// *
             return true;
 
@@ -78,11 +84,50 @@ public class LemmatizationServiceImpl implements LemmatizationService
             }
     }
 
+    public void deleteLemmaOnPage(List<Integer> lemmasId, Site site)
+    {
+        System.out.println("В классе LSImpl в методе indexPage/deleteLemmaOnPage к удалению следующие lemmaId, в количестве = " + lemmasId.size() + " : " + lemmasId); // *
+        for(Integer lemmaId : lemmasId)
+        {
+            Lemma lemmaOnDeletedPage;
+            Optional lemmaOptional = lemmaRepository.findByIdAndSiteId(lemmaId, site.getId());
+            if (lemmaOptional.isPresent())
+            {
+                lemmaOnDeletedPage = (Lemma) lemmaOptional.get();
+                if (lemmaOnDeletedPage.getFrequency() > 1)
+                {
+                    lemmaOnDeletedPage.frequencyLemmaDecr();
+                    lemmaRepository.save(lemmaOnDeletedPage);
+                } else
+                    {
+                        lemmaRepository.delete(lemmaOnDeletedPage);
+                    }
+            } else
+            {
+                System.err.println("Ошибка - леммаID/сайт: " + lemmaId + " / " + site.getUrl() + " - не существует");
+            }
+        }
+    }
+
+    public List<Integer> deleteIndexes(String pagePath, Site site)   // TODO: Нужна ли проверка на существование перед удвлением ???
+        {
+            List<Integer> deletesLemmaId = new ArrayList<>();
+            Page deletedPage = pageRepository.findByPathAndSite(pagePath, site);
+            List<Index> deletedIndexes = indexRepository.findAllByPageId(deletedPage.getId());
+            System.out.println("В классе LSImpl в методе indexPage/deleteIndexes к удалению следующие Index, в количестве = " + deletedIndexes.size() + " :\n" + deletedIndexes); // *
+            for(Index deletedIndex : deletedIndexes)
+            {
+                deletesLemmaId.add(deletedIndex.getLemmaId());
+                indexRepository.delete(deletedIndex);
+            }
+            return deletesLemmaId;
+        }
+
     @Override
     public void indexNewPage(Page page)
     {
             addLemmas(page);
-            System.out.println(page + " : В классе LSImpl в методе indexNewPage завершение метода"); // *
+            System.out.println(page.getPath() + " , сайта" + page.getSite().getUrl() + " : В классе LSImpl в методе indexNewPage завершение метода"); // *
 
     }
 
@@ -91,6 +136,10 @@ public class LemmatizationServiceImpl implements LemmatizationService
         try
             {
                 HashMap<String, Integer> splitLemmasText = splitLemmasText(getClearHTML(indexingPage.getContent()));
+                // *
+                System.out.println("В классе LSImpl методе addLemmas к добавлению получена Lemma в количестве: " + splitLemmasText.size()); // *
+                int indexCountAdd = 0;  // *
+                //
                 // Перебираем HashMap и добавляем Lemma, проверяя наличие lemma по site
                 for(String lemma : splitLemmasText.keySet())
                     {
@@ -109,23 +158,20 @@ public class LemmatizationServiceImpl implements LemmatizationService
 
                         // Добавление index в таблицу index:
                         Index savedIndex = new Index(indexingPage.getId(), savedLemma.getId(), splitLemmasText.get(lemma));
-                        System.out.println("В классе LSImpl методе addLemmas к сохранению получена savedIndex: " + savedIndex); // *
-                        indexRepository.save(savedIndex);
+
+                        //
+                        System.out.println("В классе LSImpl методе addLemmas к сохранению получен savedIndex: " + savedIndex); // *
+                        indexCountAdd++;    // *
                         //
 
-                        /* TODO: Проверки по идее не нужны, т.к. каждую страницу индексиреум целиком ???
-                        Optional indexOptional = indexRepository.findByPageIdAndLemmaId(indexingPage.getId(), savedLemma.getId());  // .orElseGet(() -> pageRepository.save(new Page));
-                        if(indexOptional.isPresent())
-                        {
-                            savedIndex = (Index) indexOptional.get();
-                            savedIndex.frequencyIndexIncr();
-                        } else
-                        {
-                            savedIndex = new Index(indexingPage.getId(), savedLemma.getId(), 1);
-                        }
-                        */
-
+                        indexRepository.save(savedIndex);
+                        //
                     }
+
+                //
+                System.out.println("В классе LSImpl методе addLemmas итого к сохранению получено и посчитано в -count- savedIndex в количестве: " + indexCountAdd); // *
+                //
+
                 //
             } catch (IOException e)
                 {
@@ -154,8 +200,6 @@ public class LemmatizationServiceImpl implements LemmatizationService
 
     public HashMap<String, Integer> splitLemmasText(String text) throws IOException
     {
-//        LuceneMorphology luceneMorph = new RussianLuceneMorphology();   // TODO: После отладки вынести в класс !!!
-
         HashMap<String, Integer> splitLemmasText = new HashMap<String, Integer>();
         String[] splitText = arrayContainsRussianUnrefinedWords(text);
         for (Iterator<String> splitTextIterator = Arrays.stream(splitText).iterator(); splitTextIterator.hasNext(); )
@@ -184,8 +228,6 @@ public class LemmatizationServiceImpl implements LemmatizationService
     @SneakyThrows
     private boolean isRussianServicePartsText(String unrefinedWord) // TODO: Найти описание библиотеки и заменить
     {
-//        LuceneMorphology luceneMorph = new RussianLuceneMorphology();   //TODO: После отладки вынести в класс !!!
-
         boolean isServicePartsText= false;
         List<String> wordMorphInfos = luceneMorph.getMorphInfo(unrefinedWord);
         for (String wordMorphInfo : wordMorphInfos)
@@ -203,8 +245,6 @@ public class LemmatizationServiceImpl implements LemmatizationService
     @SneakyThrows
     private String getLemma(String unrefinedWord)
     {
-//        LuceneMorphology luceneMorph = new RussianLuceneMorphology();   //TODO: После отладки вынести в класс !!!
-
         List<String> wordMorphsInfo = luceneMorph.getMorphInfo(unrefinedWord);
         String wordMorphInfo = wordMorphsInfo.get(0);
         String lemma = wordMorphInfo.substring(0,wordMorphInfo.indexOf("|"));
@@ -215,7 +255,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
     {
         Cleaner cleaner = new Cleaner(Safelist.basic());
         String clearPage = cleaner.clean(Jsoup.parse(pageHTML)).text();    // .wholeText();
-        System.out.println(clearPage);
+        //System.out.println(clearPage);  // *
         return clearPage;
     }
 
@@ -228,7 +268,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
         Integer siteId = site.getId();
         if(pageRepository.existsByPathAndSiteId(pagePath, siteId))
         {
-            System.out.println("В классе LSImpl в методе indexPage вход в метод после проверки if на существование страницы и сайта");
+            System.out.println("В классе LSImpl в методе indexPage вход в метод после проверки if на существование страницы и сайта - успешно");
             return true;
         } else {return false;}
     }
@@ -238,6 +278,24 @@ public class LemmatizationServiceImpl implements LemmatizationService
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // pageRepository.findById(id).orElseGet(() -> pageRepository.save(new Page));
+
+
+
+//        LuceneMorphology luceneMorph = new RussianLuceneMorphology();   //TODO: После отладки вынести в класс !!!
+
+
+
+                      /* TODO: Проверки по идее не нужны, т.к. каждую страницу индексиреум целиком ???
+                        Optional indexOptional = indexRepository.findByPageIdAndLemmaId(indexingPage.getId(), savedLemma.getId());  // .orElseGet(() -> pageRepository.save(new Page));
+                        if(indexOptional.isPresent())
+                        {
+                            savedIndex = (Index) indexOptional.get();
+                            savedIndex.frequencyIndexIncr();
+                        } else
+                        {
+                            savedIndex = new Index(indexingPage.getId(), savedLemma.getId(), 1);
+                        }
+                        */
 
 
 

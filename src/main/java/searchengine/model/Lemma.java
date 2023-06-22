@@ -37,6 +37,11 @@ public class Lemma
        this.frequency++;
     }
 
+    public void frequencyLemmaDecr()
+    {
+        this.frequency--;
+    }
+
     @Override
     public String toString()
     {

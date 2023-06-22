@@ -14,11 +14,8 @@ import java.util.concurrent.*;
 @Service
 public class IndexingServiceImpl implements IndexingService
 {
-//    @Autowired
-    private SiteRepository siteRepository;
-    //    @Autowired
-    private PageRepository pageRepository;
-
+    private SiteRepository siteRepository;  //    @Autowired
+    private PageRepository pageRepository;  //    @Autowired
     boolean isIndexingStarted = false;    // Flag from indexing status in API
     private final SitesList sites;
     ResultCheckerParse resultCheckerExample;    //1
@@ -46,11 +43,18 @@ public class IndexingServiceImpl implements IndexingService
             isIndexingStarted = true;
 
             // Блок Б2 с удалением сайта из таблицы sites
-            for (Site site : sites.getSites()) {
+            for (Site site : sites.getSites())
+            {
                 System.out.println(site);
                 Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-                for (searchengine.model.Site siteDB : siteIterable) {
-                    if (site.getUrl().equals(siteDB.getUrl())) {
+                for (searchengine.model.Site siteDB : siteIterable)
+                {
+                    if (site.getUrl().equals(siteDB.getUrl()))
+                    {
+                        // Удаляем сначала index потом lemma по site:
+
+                        //
+
                         siteRepository.delete(siteDB);
                         System.out.println("\nВыполнено удаление сайта: " + site.getUrl());
                     }
@@ -58,7 +62,8 @@ public class IndexingServiceImpl implements IndexingService
             }
 
             // Блок Б3.2/2
-            for (Site site : sites.getSites()) {
+            for (Site site : sites.getSites())
+            {
                 searchengine.model.Site siteDB = new searchengine.model.Site();
                 siteDB.setName(site.getName());
                 siteDB.setUrl(site.getUrl());

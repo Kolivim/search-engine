@@ -146,6 +146,8 @@ public class PageWriter extends RecursiveAction {
         this.site = site;
         this.isForcedPageIndexing = true;
 
+        lemmatizationService = (LemmatizationService) SpringUtils.ctx.getBean(LemmatizationService.class);  // L-I
+
         if(pageRepository.existsByPathAndSite(pagePath, site))
         {
             Page deletePage = pageRepository.findByPathAndSite(pagePath, site);
@@ -162,13 +164,15 @@ public class PageWriter extends RecursiveAction {
 
             } catch (IOException e)
                 {
-                    System.err.println("В классе PageWriter в методе removePage сработал IOException / RuntimeException(e) ///1 " + e.getMessage() +
+                    System.err.println("В классе PageWriter в методе removeOrAddPage сработал IOException / RuntimeException(e) ///1 " + e.getMessage() +
                             " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() +
                             " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданном адресе:  " + pagePath +
                             " ///8 сайта:  " + site.getUrl());
+                    System.out.println("Для переданного пути: " + linkAU + " - пройден неправильно метод removeOrAddPage, pageId = ???"); //*
+                    return new Page(); // Передача в случае ошибки в try/catch
                 }
-        System.out.println("Для переданного пути: " + linkAU + " - пройден неправильно метод removeOrAddPage, pageId = ???"); //*
-        return new Page(); // Передача в случае ошибки в try/catch
+//        System.out.println("Для переданного пути: " + linkAU + " - пройден неправильно метод removeOrAddPage, pageId = ???"); //*
+//        return new Page(); // Передача в случае ошибки в try/catch
     }
 
     public int removeOrAddPage(String pagePath, String linkAU, Site site)   // TODO: Нужна ли проверка на остановку индексации ???
