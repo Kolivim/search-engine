@@ -8,7 +8,6 @@ import org.jsoup.safety.Cleaner;
 import org.jsoup.safety.Safelist;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import searchengine.config.SitesList;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
@@ -18,6 +17,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.IntStream;
 
 @Service
 public class LemmatizationServiceImpl implements LemmatizationService
@@ -30,6 +30,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
     private String[] servicePartsText = {"ПРЕДЛ", "МЕЖД", "СОЮЗ"};
     private HashMap<String, Integer> lemmasText = new HashMap<String, Integer>();
     private LuceneMorphology luceneMorph = new RussianLuceneMorphology();   // TODO: После отладки вынести в класс !!! M
+    private static final int SNIPPET_LENGHT = 240;
     @Autowired
     public LemmatizationServiceImpl(PageRepository pageRepository, SiteRepository siteRepository,
                                     LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException
@@ -110,25 +111,55 @@ public class LemmatizationServiceImpl implements LemmatizationService
     }
 
     public List<Integer> deleteIndexes(String pagePath, Site site)   // TODO: Нужна ли проверка на существование перед удвлением ???
+    {
+        List<Integer> deletesLemmaId = new ArrayList<>();
+        Page deletedPage = pageRepository.findByPathAndSite(pagePath, site);
+        List<Index> deletedIndexes = indexRepository.findAllByPageId(deletedPage.getId());
+        System.out.println("В классе LSImpl в методе indexPage/deleteIndexes к удалению следующие Index, в количестве = " + deletedIndexes.size() + " :\n" + deletedIndexes); // *
+        for(Index deletedIndex : deletedIndexes)
         {
-            List<Integer> deletesLemmaId = new ArrayList<>();
-            Page deletedPage = pageRepository.findByPathAndSite(pagePath, site);
+            deletesLemmaId.add(deletedIndex.getLemmaId());
+            indexRepository.delete(deletedIndex);
+        }
+        return deletesLemmaId;
+    }
+
+    @Override
+    public void deleteSiteIndexAndLemma(Site site)
+    {
+        // TODO: Здесь удаляем Index:
+        Iterable<Page> deletedPagesIterable = pageRepository.findAllBySiteId(site.getId());
+        for (Page deletedPage : deletedPagesIterable)
+        {
             List<Index> deletedIndexes = indexRepository.findAllByPageId(deletedPage.getId());
-            System.out.println("В классе LSImpl в методе indexPage/deleteIndexes к удалению следующие Index, в количестве = " + deletedIndexes.size() + " :\n" + deletedIndexes); // *
+            System.out.println("В классе LSImpl в методе deleteSiteIndexAndLemma к удалению следующие Index, в количестве = " + deletedIndexes.size() + " :\n" + deletedIndexes); // *
             for(Index deletedIndex : deletedIndexes)
             {
-                deletesLemmaId.add(deletedIndex.getLemmaId());
                 indexRepository.delete(deletedIndex);
             }
-            return deletesLemmaId;
         }
+        //
+
+        // TODO: Здесь удаляем Lemma:
+        deleteLemmaOnSite(site);
+        //
+    }
+
+    public void deleteLemmaOnSite(Site site)
+    {
+        System.out.println("В классе LSImpl начало метода deleteLemmaOnSite у сайта: " + site.getUrl()); // *
+        Iterable<Lemma> deletedLemmasInSiteIterable = lemmaRepository.findAllBySiteId(site.getId());
+        for(Lemma deleteLemma: deletedLemmasInSiteIterable)
+        {
+            lemmaRepository.delete(deleteLemma);
+        }
+    }
 
     @Override
     public void indexNewPage(Page page)
     {
             addLemmas(page);
             System.out.println(page.getPath() + " , сайта" + page.getSite().getUrl() + " : В классе LSImpl в методе indexNewPage завершение метода"); // *
-
     }
 
     private void addLemmas(Page indexingPage)
@@ -136,10 +167,12 @@ public class LemmatizationServiceImpl implements LemmatizationService
         try
             {
                 HashMap<String, Integer> splitLemmasText = splitLemmasText(getClearHTML(indexingPage.getContent()));
+
                 // *
                 System.out.println("В классе LSImpl методе addLemmas к добавлению получена Lemma в количестве: " + splitLemmasText.size()); // *
                 int indexCountAdd = 0;  // *
                 //
+
                 // Перебираем HashMap и добавляем Lemma, проверяя наличие lemma по site
                 for(String lemma : splitLemmasText.keySet())
                     {
@@ -179,6 +212,453 @@ public class LemmatizationServiceImpl implements LemmatizationService
                 }
     }
 
+    @Override
+    public void getSnippet(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, /*ArrayList<Lemma> lemmas,*/ Set<String> lemmasList)
+    {
+        System.out.println("В методе getSnippet() класса LemmServImpl - Передан sortedAbsoluteRelevancePages страниц с их абсолютной релевантностью: \n[ " + sortedAbsoluteRelevancePages + " ]"); // *
+
+        LinkedHashMap<Page, ArrayList<String>> sortedPagesAndSnippet = new LinkedHashMap<>();
+
+        LinkedHashMap<Integer, Integer> contentIndexAndLength = new LinkedHashMap<>();
+
+        LinkedHashMap<Page, String> sortedAbsoluteRelevancePagesSnippet = new LinkedHashMap<>();
+
+        for(Page pageSearch : sortedAbsoluteRelevancePages.keySet())
+        {
+            ArrayList<Integer> lemmasIndex = new ArrayList<Integer>();
+            String content = getClearHTML(pageSearch.getContent());
+            content = content.trim();
+
+            String[] splitText = content.split("\\s+");
+
+            System.out.println("В методе getSnippet() класса LemmServImpl - Получен текст страницы: " +
+                    pageSearch + " : " + splitText); // *
+
+            //
+            StringBuilder builder = new StringBuilder();
+            ArrayList<String> contentPage = new ArrayList<>();
+            //
+
+            for (int i = 0; i < splitText.length; i++)
+            {
+                String unrefinedWord = splitText[i];
+//*                System.out.println("В методе getSnippet() класса LemmServImpl - Получен unrefinedWord: " + unrefinedWord); // *
+                unrefinedWord = unrefinedWord.replaceAll("([^а-яА-Я\\s])", "").trim().toLowerCase(new Locale("ru", "RU"));    // Заменить на введенную новую переменную для проверки - ниже она же добавляется
+//*                System.out.println("В методе getSnippet() класса LemmServImpl - Полученный unrefinedWord преобразован в: " + unrefinedWord); // *
+                if(!unrefinedWord.isBlank() & !unrefinedWord.isEmpty())
+                {
+//*                    System.out.println("В методе getSnippet() класса LemmServImpl - Преобразованный unrefinedWord: " + unrefinedWord + " - прошел проверку \"if(!unrefinedWord.isBlank() & !unrefinedWord.isEmpty())\" и передан к получению из него леммы"); // *
+                    String lemma = getLemma(unrefinedWord);
+                    if (lemmasList.contains(lemma))   // (lemmasString.contains(lemma))
+                    {
+                        builder.append(" "); // builder.append(" "); Для создания пробела перед леммой - проверить нужно ли ???
+                        contentPage.add(builder.toString()); // Проверить сработает ли - если что вынести в отдельную переменную
+                        builder = new StringBuilder();
+                        String lemmaString = "<b>".concat(splitText[i]).concat("</b>");
+                        contentPage.add(lemmaString);  //  (splitText[i])
+
+                        lemmasIndex.add(i);
+
+                        System.out.println("\nВ методе getSnippet() класса LemmServImpl - Получено совпадение текста страницы с леммой: " +
+                                lemma + " , имеющей вид на сайте: " + splitText[i] + " , имеющей индекс в массиве = " + i); // *
+                    } else {
+                        builder.append(splitText[i]);
+                        builder.append(" ");
+                    }
+
+                } else // Дописываем в текст страницы цифровые / знаковые и иные не удовлетворяющие условию if() символы
+                    {
+                        builder.append(splitText[i]);
+                        builder.append(" ");
+                    }
+            }
+            if(!builder.isEmpty()) {contentPage.add(builder.toString());}
+            //
+
+            // TODO: Здесь вызываем getSnippetPage(), в котором в т.ч. оборачиваем в <div> и добавляем результат в сортированный список:
+            int countLemmaOnPage = lemmasIndex.size(); // TODO: Добавить проверку найдены ли леммы - если их  - пропускаем подсчет и выводим ошибку поиска лемм на странице
+            System.out.println("В методе getSnippet() класса LemmServImpl - Получен list текста страницы с выделенной леммой: " + contentPage); // *
+            String contentPageSnippet = getSnippetPage(contentPage, lemmasList,countLemmaOnPage, lemmasIndex);   // TODO: Передать вырезанный сниппет страницы дальше
+            System.out.println("В методе getSnippet() класса LemmServImpl - Получен contentPageSnippet текста страницы с выделенным snippet: " + contentPageSnippet); // *
+            //
+
+            //  TODO: Здесь добавляем полученный сниппет страницы в MAP:
+            sortedAbsoluteRelevancePagesSnippet.put(pageSearch, contentPageSnippet);
+            //
+        }
+        System.out.println("В методе getSnippet() класса LemmServImpl - Получен sortedAbsoluteRelevancePagesSnippet страниц с текстом выделенных snippet: \n[ " + sortedAbsoluteRelevancePagesSnippet + " ]"); // *
+    }
+
+    public String getSnippetPage(ArrayList<String> contentPage, Set<String> lemmasList, int countLemmaOnPage, ArrayList<Integer> lemmasIndex) // TODO: Переписать с выделением в отдельные методы до 30 строк длиной !!! Проанализировать как убрать повтор кода !!!
+    {
+        //
+        int indexEndContentPage = (contentPage.size()-1);
+        ArrayList<Integer> lemmasIndexSearch = getIndexSearchList(0, indexEndContentPage);  //  3 june
+        //lemmasIndexSearch.addAll(lemmasIndex);  //  3 june
+        //
+
+        if (countLemmaOnPage < 1)
+        {
+            System.err.println("В методе getSnippetPage() класса LemmServImpl - Получен countLemmaOnPage < 1 - леммы не найдены, ошибка поиска лемм: " + countLemmaOnPage); // *
+            return null;
+        }
+
+        //
+        /*
+        int lengthLemmas = getLengthLemmas(contentPage);
+        int conditionalLengthLemmas = (SNIPPET_LENGHT - lengthLemmas) / countLemmaOnPage;  // Не заложил удлиннение лемм в сниппете на троеточие с двух сторон !!!
+         */
+        //
+
+        String snippetPage = "";
+        int conditionalLengthLemmas = getConditionalLengthLemmas(contentPage, countLemmaOnPage);
+        int contentLength = SNIPPET_LENGHT;
+
+        // Блок с концом:
+        String snippetEnd = "";
+        int excludedIndexEnd = 0;
+        if(isLemma(contentPage.get(contentPage.size()-1))) // Лемма последняя на странице ДА/НЕТ
+        {
+            int indexPreEnd = contentPage.size() - 2;
+            if (!isLemma(contentPage.get(indexPreEnd)))
+            {
+                if (contentPage.get(indexPreEnd).length() > (conditionalLengthLemmas + conditionalLengthLemmas / 2))
+                {
+                    String partSnippet = "...".concat(contentPage.get(indexPreEnd).substring(contentPage.get(indexPreEnd).length() - conditionalLengthLemmas, contentPage.get(indexPreEnd).length()));
+                    snippetEnd = snippetEnd.concat(partSnippet);
+                    contentLength -= partSnippet.length();
+                } else
+                {
+                    String partSnippet = " ...".concat(contentPage.get(indexPreEnd));
+                    snippetEnd = snippetEnd.concat(partSnippet);
+                    contentLength -= partSnippet.length();
+                    excludedIndexEnd++;
+                    lemmasIndexSearch.remove((Integer)indexPreEnd);  //  3 june
+                }
+            }
+            int indexEndLemma = contentPage.size() - 1;
+            snippetEnd = snippetEnd.concat(contentPage.get(contentPage.size()-1));
+            contentLength -= contentPage.get(indexEndLemma).length();
+            excludedIndexEnd++;
+            lemmasIndexSearch.remove((Integer)indexEndLemma);  //  3 june
+
+        } else
+            {
+                //
+                int indexPrePreEnd = contentPage.size() - 3;
+                if(!isLemma(contentPage.get(indexPrePreEnd)))
+                {
+                    if (contentPage.get(indexPrePreEnd).length() > (conditionalLengthLemmas))
+                    {
+                        int indexStringStop = contentPage.get(indexPrePreEnd).length() - 1;
+                        int indexStringStart = indexStringStop - conditionalLengthLemmas / 2;
+                        String partSnippet = "...".concat(contentPage.get(indexPrePreEnd).substring(indexStringStart, indexStringStop));
+                        snippetEnd = snippetEnd.concat(partSnippet);
+                        contentLength -= partSnippet.length();
+                    } else
+                        {
+                            String partSnippet = contentPage.get(indexPrePreEnd);
+                            snippetEnd = snippetEnd.concat(partSnippet);
+                            contentLength -= partSnippet.length();
+                            excludedIndexEnd++;
+                            lemmasIndexSearch.remove((Integer)indexPrePreEnd);  //  3 june
+                        }
+                }
+                //
+
+                //
+                int indexEndLemma = contentPage.size() - 2;
+                String partSnippet1 = contentPage.get(indexEndLemma);
+                snippetEnd = snippetEnd.concat(" ").concat(partSnippet1).concat(" ");
+                contentLength -= partSnippet1.length();
+                excludedIndexEnd++;
+                lemmasIndexSearch.remove((Integer)indexEndLemma);  //  3 june
+                //
+
+                //
+                int indexEnd = contentPage.size() - 1;
+                if(contentPage.get(indexEnd).length() > (conditionalLengthLemmas/2))
+                {
+                    String partSnippet = contentPage.get(indexEnd).substring(0,conditionalLengthLemmas/2).concat("...");
+                    snippetEnd = snippetEnd.concat(partSnippet);
+                    contentLength -= partSnippet.length();
+                    excludedIndexEnd++;
+                    lemmasIndexSearch.remove((Integer) indexEnd);  //  3 june
+                } else
+                    {
+                        String partSnippet = contentPage.get(indexEnd);
+                        snippetEnd = snippetEnd.concat(partSnippet);
+                        contentLength -= partSnippet.length();
+                        excludedIndexEnd++;
+                        lemmasIndexSearch.remove((Integer)indexEnd);  //  3 june
+                    }
+                //
+            }
+        //
+
+        int indexEnd = (contentPage.size()-1) - excludedIndexEnd;   // Верно ли ???
+        boolean isExistIndex = indexEnd > 0;
+
+        // Блок со стартом:
+        String snippetStart = "";
+        Integer excludedIndexStart = 0; // int excludedIndexStart = 0;
+        if(isExistIndex)
+        {
+            int index = 0;
+            if(isLemma(contentPage.get(index)) & lemmasIndexSearch.contains(index)) // Лемма первая на странице
+            {
+                snippetStart = snippetStart.concat(contentPage.get(index));
+                contentLength -= contentPage.get(index).length();
+                excludedIndexStart++;
+                lemmasIndexSearch.remove((Integer)index);
+
+                //
+                int indexPost = 1;
+                if(lemmasIndexSearch.contains(indexPost))   // 3 june v2
+                {
+                    if (contentPage.get(indexPost).length() > (conditionalLengthLemmas + conditionalLengthLemmas / 2))
+                    {
+                        snippetStart = snippetStart.concat(contentPage.get(indexPost).substring(0, conditionalLengthLemmas)).concat("...");
+                        contentLength -= conditionalLengthLemmas;
+                    } else
+                        {
+                            snippetStart = snippetStart.concat(contentPage.get(indexPost));
+                            contentLength -= contentPage.get(indexPost).length();
+                            excludedIndexStart++;
+                            lemmasIndexSearch.remove((Integer) indexPost);
+                        }
+                }
+                //
+            } else
+                {
+                    //
+                    int indexFirst = 0;
+                    if(lemmasIndexSearch.contains(indexFirst))   // 3 june v2
+                    {
+                        if(contentPage.get(indexFirst).length() > (conditionalLengthLemmas/2))
+                        {
+                            int indexStringStop = contentPage.get(indexFirst).length() - 1;
+                            int indexStringStart = indexStringStop - conditionalLengthLemmas/2;
+                            String partSnippet = "...".concat(contentPage.get(indexFirst).substring(indexStringStart,indexStringStop));
+                            snippetStart = snippetStart.concat(partSnippet);
+                            contentLength -= partSnippet.length();
+                            excludedIndexStart++;
+                            lemmasIndexSearch.remove((Integer)indexFirst);
+                        } else
+                            {
+                                String partSnippet = contentPage.get(indexFirst);
+                                snippetStart = snippetStart.concat(partSnippet);
+                                contentLength -= partSnippet.length();
+                                excludedIndexStart++;
+                                lemmasIndexSearch.remove((Integer)indexFirst);
+                            }
+                    }
+                    //
+
+                    //
+                    int indexPost = 1;
+                    if(lemmasIndexSearch.contains(indexPost))   // 3 june v2
+                    {
+                        String partSnippet1 = contentPage.get(indexPost);   // Основной элемент
+                        snippetStart = snippetStart.concat(" ").concat(partSnippet1).concat(" ");
+                        contentLength -= partSnippet1.length();
+                        excludedIndexStart++;
+                        lemmasIndexSearch.remove((Integer) indexPost);
+                    }
+                    //
+
+                    //
+                    int indexPostPost = 2;
+                    if(!isLemma(contentPage.get(indexPostPost)) & lemmasIndexSearch.contains(indexPostPost))
+                    {
+                        if (contentPage.get(indexPostPost).length() > (conditionalLengthLemmas + conditionalLengthLemmas / 2))
+                        {
+                            String partSnippet = contentPage.get(indexPostPost).substring(0, conditionalLengthLemmas / 2).concat("...");
+                            snippetStart = snippetStart.concat(partSnippet);
+                            contentLength -= partSnippet.length();
+                        } else
+                            {
+                                String partSnippet = contentPage.get(indexPostPost);
+                                snippetStart = snippetStart.concat(partSnippet);
+                                contentLength -= partSnippet.length();
+                                excludedIndexStart++;
+                                lemmasIndexSearch.remove((Integer)indexPostPost);
+                            }
+                    }
+                    //
+                }
+        } else
+            {
+                System.out.println("Ошибка либо индексы перебраны в snippetEnd!!! startSnippet");
+            }
+        //
+
+        int indexStart = excludedIndexStart;   // Верно ли ???
+        boolean isExistIndexStart = indexStart < 0;
+
+        // Поиск частей сниппетов посередине:
+        int[] arrIndexMiddle = IntStream.iterate(excludedIndexStart, i -> i + 1).limit(excludedIndexEnd).toArray();
+        ArrayList<Integer> indexSearchList = getIndexSearchList(indexStart, indexEnd);  //ArrayList<Integer> l = new ArrayList<>(); //ArrayList<Integer> list = (ArrayList<Integer>) Collections.singletonList(arrIndexMiddle);
+
+        String snippetMiddle = "";
+        for (int i = indexStart; i <= indexEnd; i++)
+        {
+            if(isLemma(contentPage.get(i)))
+            {
+                //
+                //snippetMiddle = snippetMiddle.concat(" ").concat(getMiddlePartSnippet(contentPage, conditionalLengthLemmas, i,  indexSearchList));
+                //
+                ArrayList<String> snippetPartPageWithRemoveIndex = getMiddlePartSnippet(contentPage, conditionalLengthLemmas, i,  indexSearchList);
+                String partSnippetMiddle = snippetPartPageWithRemoveIndex.get(0);
+                snippetMiddle = snippetMiddle.concat(" ").concat(partSnippetMiddle);
+                Integer indexRemove = Integer.valueOf(snippetPartPageWithRemoveIndex.get(1));
+                if(indexRemove > 0)
+                    {
+                        indexSearchList.remove(indexRemove);
+                    }
+                //
+            }
+        }
+        //
+
+        //Объединение сниппетов:
+        System.out.println("В методе getSnippet() класса LemmServImpl - Получены String сниппетов страницы: \nStart: " + snippetStart +
+                "\nMiddle: " + snippetMiddle + "\nEnd: " + snippetEnd); // *
+        //
+
+        snippetPage = snippetPage.concat(snippetStart).concat(" ").concat(snippetMiddle).concat(" ").concat(snippetEnd);
+
+        return snippetPage;
+    }
+
+    public ArrayList<Integer> getIndexSearchList(int excludedIndexStart, int excludedIndexEnd)
+    {
+        ArrayList<Integer> indexSearchList = new ArrayList<>();
+        for (int i = excludedIndexStart; i <= excludedIndexEnd; i++)
+        {
+            indexSearchList.add(i);
+        }
+        return indexSearchList;
+    }
+
+    public ArrayList<String> getMiddlePartSnippet(ArrayList<String> contentPage, int conditionalLengthLemmas, int index,  ArrayList<Integer> indexSearchList)
+    {
+        ArrayList<String> snippetPartPageWithRemoveIndex = new ArrayList<>();
+        String removeIndex = "0";
+        int snippetPartPageLength = 0;
+        String snippetPartPage = "";
+        if(isLemma(contentPage.get(index)))
+        {
+            // Слева от леммы текст:
+            int partIndexBefore = index - 1;
+            if(!isLemma(contentPage.get(partIndexBefore)))
+            {
+                if (indexSearchList.contains(partIndexBefore))
+                {
+                    if (contentPage.get(partIndexBefore).length() > (conditionalLengthLemmas / 2))
+                    {
+                        int indexStringStop = contentPage.get(partIndexBefore).length() - 1;
+                        int indexStringStart = indexStringStop - conditionalLengthLemmas / 2;
+                        String partSnippet = "...".concat(contentPage.get(partIndexBefore).substring(indexStringStart, indexStringStop));
+                        snippetPartPage = snippetPartPage.concat(partSnippet);
+                        snippetPartPageLength += partSnippet.length();
+                    } else
+                        {
+                            String partSnippet = contentPage.get(partIndexBefore);
+                            snippetPartPage = snippetPartPage.concat(partSnippet);
+                            snippetPartPageLength += partSnippet.length();
+                            // excludedIndexStart++;    // Метод подается в полный перебор середины страницы - отмечать уже пройденные части не нужно
+                        }
+                } else
+                    {
+                        System.out.println("Элемент snippet находится за пределами диапазона записи сниппета"); // *
+                    }
+            }  else
+                {
+                    System.out.println("Элемент" + contentPage.get(partIndexBefore) +  " - является леммой"); // *
+                }
+            //
+
+            //  Сама лемма:
+            String partSnippet1 = contentPage.get(index);   // Основной элемент
+            snippetPartPage = snippetPartPage.concat(" ").concat(partSnippet1).concat(" ");
+            snippetPartPageLength += partSnippet1.length();
+            // excludedIndexStart++;    // Метод подается в полный перебор середины страницы - отмечать уже пройденные части не нужно
+
+            // Справа от леммы текст:
+            int partIndexAfter = index + 1;
+            if(!isLemma(contentPage.get(partIndexAfter)))
+            {
+                if (indexSearchList.contains(partIndexAfter))
+                {
+                    if (contentPage.get(partIndexAfter).length() > (conditionalLengthLemmas / 2))
+                    {
+                        int indexStringStart = 0;
+                        int indexStringStop = conditionalLengthLemmas / 2;
+                        String partSnippet = contentPage.get(partIndexAfter).substring(indexStringStart, indexStringStop).concat("...");
+                        snippetPartPage = snippetPartPage.concat(partSnippet);
+                        snippetPartPageLength += partSnippet.length();
+                    } else
+                        {
+                            String partSnippet = contentPage.get(partIndexAfter);
+                            snippetPartPage = snippetPartPage.concat(partSnippet);
+                            snippetPartPageLength += partSnippet.length();
+                            removeIndex = Integer.toString (partIndexAfter);
+                            // excludedIndexStart++;    // Метод подается в полный перебор середины страницы - отмечать уже пройденные части не нужно
+                        }
+                } else
+                    {
+                        System.out.println("Элемент snippet находится за пределами диапазона записи сниппета"); // *
+                    }
+            } else
+                {
+                    System.out.println("Элемент" + contentPage.get(partIndexAfter) +  " - является леммой"); // *
+                }
+            //
+        }
+        //return snippetPartPage;
+        snippetPartPageWithRemoveIndex.add(snippetPartPage);
+        snippetPartPageWithRemoveIndex.add(removeIndex);
+        return snippetPartPageWithRemoveIndex;
+    }
+
+    public boolean isLemma(String text)
+    {
+        boolean isLemma = false;
+        if(text.contains("<b>"))
+        {
+            isLemma = true;
+        }
+        return isLemma;
+    }
+
+    public int getConditionalLengthLemmas(ArrayList<String> contentPage, int countLemmaOnPage)
+    {
+        int lengthLemmas = getLengthLemmas(contentPage);
+        int conditionalLengthLemmas = (SNIPPET_LENGHT - lengthLemmas) / countLemmaOnPage;  // Не заложил удлиннение лемм в сниппете на троеточие с двух сторон !!!
+        return conditionalLengthLemmas;
+    }
+
+    public int getLengthLemmas(ArrayList<String> contentPage)
+    {
+        int lengthLemmas = 0;
+        for (String text : contentPage)
+        {
+            if(isLemma(text))
+            {
+                lengthLemmas += text.length();
+            }
+        }
+        return lengthLemmas;
+    }
+
+    public ArrayList<String> getLemmasList(ArrayList<Lemma> lemmas)
+    {
+        ArrayList<String> lemmasString = new ArrayList<>();
+        for(Lemma lemma : lemmas) {lemmasString.add(lemma.getLemma());}
+        return lemmasString;
+    }
+
     private HashMap<String, String> getPathAndSiteUrl(String path)
     {
         HashMap<String, String> pathInfo = new HashMap<String, String>();
@@ -192,9 +672,9 @@ public class LemmatizationServiceImpl implements LemmatizationService
             pathInfo.put("siteUrl", siteURL);
             System.out.println(pathInfo);  // *
         } catch (MalformedURLException e)
-        {
-            System.err.println("В классе LSImpl методе indexPage сработал MalformedURLException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданной странице:  " + path);
-        }
+            {
+                System.err.println("В классе LSImpl методе indexPage сработал MalformedURLException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на переданной странице:  " + path);
+            }
         return pathInfo;
     }
 
@@ -205,7 +685,10 @@ public class LemmatizationServiceImpl implements LemmatizationService
         for (Iterator<String> splitTextIterator = Arrays.stream(splitText).iterator(); splitTextIterator.hasNext(); )
         {
             String unrefinedWord = splitTextIterator.next();
-            if(isRussianServicePartsText(unrefinedWord)){continue;}
+            if(isRussianServicePartsText(unrefinedWord))
+                {
+                    continue; // TODO: Проверить срабатывает ли сброс прохождения дальнейшего кода в цикле ???
+                }
             String lemma = getLemma(unrefinedWord);
             if(splitLemmasText.containsKey(lemma))
                 {
@@ -278,6 +761,53 @@ public class LemmatizationServiceImpl implements LemmatizationService
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // pageRepository.findById(id).orElseGet(() -> pageRepository.save(new Page));
+
+
+
+//
+/*
+            contentIndexAndLength.put(-1, 0); // Добавляем индекс "-1" и значение количества символов для "хвоста" страницы, после крайней леммы
+                    int sumCountSymbol = 0;
+                    for (int i = 0; i < splitText.length; i++)
+        {
+        String unrefinedWord = splitText[i];
+        String lemma = getLemma(unrefinedWord.toLowerCase(new Locale("ru", "RU")));
+
+        sumCountSymbol += unrefinedWord.length();   // Пробел между словми не учтен !!!
+
+        if(lemmasString.contains(lemma))
+        {
+                        int startLemma;
+                        int finishLemma;
+
+        contentIndexAndLength.put(i, sumCountSymbol);
+        sumCountSymbol = 0;
+        lemmasIndex.add(i); // Итог блока
+
+        System.out.println("В методе getSnippet() класса LemmServImpl - Получено совпадение текста страницы с леммой: " +
+        lemma + " , имеющей вид на сайте: " + unrefinedWord + " , имеющей индекс в массиве = " + i); // *
+        }
+
+        contentIndexAndLength.replace(-1, sumCountSymbol);
+        }
+*/
+//
+
+
+
+//
+//            for (Iterator<String> splitTextIterator = Arrays.stream(splitText).iterator(); splitTextIterator.hasNext(); )
+//        {
+//        String unrefinedWord = splitTextIterator.next();
+//        String lemma = getLemma(unrefinedWord.toLowerCase(new Locale("ru", "RU")));
+//        if(lemmasString.contains(lemma))
+//        {
+//
+//        System.out.println("В методе getSnippet() класса LemmServImpl - Получено совпадение текста страницы с леммой: " +
+//        lemma + " , имеющей вид на сайте: " + unrefinedWord); // *
+//        }
+//        }
+//
 
 
 

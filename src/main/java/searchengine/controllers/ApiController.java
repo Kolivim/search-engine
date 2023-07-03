@@ -30,14 +30,16 @@ public class ApiController {
     private final IndexingService indexingService;  // My
     private final StatisticsService statisticsService;
     private final LemmatizationService lemmatizationService; // LEMMA STAGE
+    private final SearchService searchService; // SEARCH STAGE
 
-    public ApiController(IndexingService indexingService, StatisticsService statisticsService, LemmatizationService lemmatizationService)
+    public ApiController(IndexingService indexingService, StatisticsService statisticsService,
+                         LemmatizationService lemmatizationService, SearchService searchService)
     {
         this.indexingService = indexingService; // My
         this.statisticsService = statisticsService;
         this.lemmatizationService = lemmatizationService; // LEMMA STAGE
+        this.searchService = searchService;
     }
-
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics()
@@ -45,11 +47,8 @@ public class ApiController {
         return ResponseEntity.ok(statisticsService.getStatistics());
     }
 
-
     /// My ///
-    @GetMapping(value = "/startIndexing"                            // Переписать аналогично StopIndexing()
-//            , produces = MediaType.APPLICATION_JSON_VALUE
-                )
+    @GetMapping(value = "/startIndexing" /* , produces = MediaType.APPLICATION_JSON_VALUE */ )
     public ResponseEntity<Map<String,String>> startIndexing()
     {
         StatisticsResponse response = statisticsService.getStatistics();    // Убрать м.б.?
@@ -80,6 +79,19 @@ public class ApiController {
             {return messageService.indexPageOk();}
                 else
                     {return messageService.indexPageError();}
+    }
+
+    @GetMapping(value = "/search")
+    public ResponseEntity<Map<String,String>> search(String query, int offset, int limit, String site)   // @RequestParam(value="query", required=false, defaultValue="World")  //   public ResponseEntity<Map<String,String>> search(@RequestParam(value="query") String query, @RequestParam(value="offset") int offset, @RequestParam(value="limit") int limit)   // @RequestParam(value="query", required=false, defaultValue="World")
+    {
+        System.out.println("Передано значение: \"" + query + "\" , offset = " + offset + " , limit = " + limit + " , site = " + site);    // *
+
+        boolean isSearchSuccess = searchService.startSearch(query, offset, limit, site);
+        if (isSearchSuccess)
+            {return messageService.searchOk();}
+                else
+                    {return messageService.searchError();}
+
     }
 
 }

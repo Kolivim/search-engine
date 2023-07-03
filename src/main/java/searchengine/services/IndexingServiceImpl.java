@@ -16,6 +16,7 @@ public class IndexingServiceImpl implements IndexingService
 {
     private SiteRepository siteRepository;  //    @Autowired
     private PageRepository pageRepository;  //    @Autowired
+    private LemmatizationService lemmatizationService;  // L-I
     boolean isIndexingStarted = false;    // Flag from indexing status in API
     private final SitesList sites;
     ResultCheckerParse resultCheckerExample;    //1
@@ -24,12 +25,12 @@ public class IndexingServiceImpl implements IndexingService
     ExecutorService executor;   //29
 
     @Autowired
-    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites)
-    {
+    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites, LemmatizationService lemmatizationService)
+    {   // this.startIndexing = startIndexing;
         this.sites = sites;
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
-//        this.startIndexing = startIndexing;
+        this.lemmatizationService = lemmatizationService;
     }
 
     @Override
@@ -52,7 +53,7 @@ public class IndexingServiceImpl implements IndexingService
                     if (site.getUrl().equals(siteDB.getUrl()))
                     {
                         // Удаляем сначала index потом lemma по site:
-
+                        lemmatizationService.deleteSiteIndexAndLemma(siteDB);
                         //
 
                         siteRepository.delete(siteDB);
@@ -78,20 +79,6 @@ public class IndexingServiceImpl implements IndexingService
             Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
             for (searchengine.model.Site siteDB : siteIterable)
             {
-
-//            try {
-//                ForkJoinTask<?> result = new ForkJoinTask<?>().adapt((Runnable) new PageWriter(siteDB));
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-
-            /* Рабочий!!!
-            //Вар.1
-            RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
-            taskList.add(futureValue);
-            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-            */
-
                 // /*
                 //Вар.3
                 StartIndexing value = new StartIndexing(siteDB);
@@ -99,20 +86,7 @@ public class IndexingServiceImpl implements IndexingService
                 listStartIndexing.add(value);
                 taskList.add(futureValue);
                 System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-//            */
-
-            /*
-            // Вар.2
-            RunnableFuture<Boolean> futureValue = null;
-            try
-            {
-                futureValue = new FutureTask<>(new ForkJoinPool().invoke(new PageWriter(siteDB)));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            taskList.add(futureValue);
-            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-            */
+                // */
             }
 
 //        ExecutorService executor = Executors.newFixedThreadPool(4); // //29
@@ -145,7 +119,7 @@ public class IndexingServiceImpl implements IndexingService
         if(isIndexingStarted)
             {
                 // Блок на пробу с присвоением indexingStatus SiteDB
-//               /*
+                // /*
                Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
                 for (searchengine.model.Site siteDB : siteIterable)
                 {
@@ -156,7 +130,7 @@ public class IndexingServiceImpl implements IndexingService
                         System.out.println("\nВ классе IndexingServiceImpl в методе stopIndexing() выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
                     }
                 }
-//                */
+                // */
 
                 // June 11
                 isIndexingStarted = false;
@@ -173,20 +147,11 @@ public class IndexingServiceImpl implements IndexingService
                 System.out.println("\nКласс IndexingServImp метод stopIndexing - выполнена передача значения true сеттеру setIndexingStopped");
                 List<Runnable> notExecuted = executor.shutdownNow();
 
-                // 11 june
-//                try
-//                {
-//                    executor.awaitTermination(1, TimeUnit.DAYS);
-//                } catch (InterruptedException e)
-//                {
-//                    System.err.println("В классе IndexingЫукмШьзд методе compute сработал InterruptedException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на .....:  ");
-//                }
-                //
 
                 System.out.println("\nЛист невыполненных задач: " + notExecuted);
 
                 //
-//                isIndexingStarted = false;  // перенести внутрь остановки ???
+                // isIndexingStarted = false;  // перенести внутрь остановки ???
                 System.out.println("\nВ классе IndexingServImpl завершение метода stopIndexing(), значение isIndexingStarrted=" + isIndexingStarted);
                 //
 
@@ -198,5 +163,46 @@ public class IndexingServiceImpl implements IndexingService
     public void setIndexingStarted(boolean indexingStarted) {isIndexingStarted = indexingStarted;}  //28
     @Override
     public boolean getIndexingStarted(){return isIndexingStarted;}
-
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            /*
+            // Вар.2
+            RunnableFuture<Boolean> futureValue = null;
+            try
+            {
+                futureValue = new FutureTask<>(new ForkJoinPool().invoke(new PageWriter(siteDB)));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            taskList.add(futureValue);
+            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
+            */
+
+
+
+// 11 june
+//                try
+//                {
+//                    executor.awaitTermination(1, TimeUnit.DAYS);
+//                } catch (InterruptedException e)
+//                {
+//                    System.err.println("В классе IndexingЫукмШьзд методе compute сработал InterruptedException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на .....:  ");
+//                }
+//
+
+
+
+//            try {
+//                ForkJoinTask<?> result = new ForkJoinTask<?>().adapt((Runnable) new PageWriter(siteDB));
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+
+            /* Рабочий!!!
+            //Вар.1
+            RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
+            taskList.add(futureValue);
+            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
+            */

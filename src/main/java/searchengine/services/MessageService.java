@@ -57,4 +57,19 @@ public class MessageService
         return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(503));
     }
 
+    public ResponseEntity<Map<String,String>> searchOk()    // TODO: Переписать на возврат требуемого значения
+    {
+        messageList.clear();
+        messageList.put("result", "true");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
+    }
+
+    public ResponseEntity<Map<String,String>> searchError()    // TODO: Переписать на возврат требуемого значения
+    {
+        messageList.clear();
+        messageList.put("result", "false");
+        messageList.put("error", "Задан пустой поисковый запрос");
+        messageList.put("error", "Индексация сайта не завершена");
+        return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(501));
+    }
 }

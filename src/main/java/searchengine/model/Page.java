@@ -72,7 +72,7 @@ public class Page //implements Auditable // implements Serializable
                 ", siteId=" + siteId +
                 ", path='" + path + '\'' +
                 ", code=" + code +
-                ", content='" + content + '\'' +
+                ", content[Length]= ['" + content.length() + "]" + '\'' +
 //                ", site=" + site +
                 '}';
     }

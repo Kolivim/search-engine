@@ -288,23 +288,22 @@ public class PageWriter extends RecursiveAction {
     public Page addPage(String link, String linkAU) throws IOException
 //    public synchronized Page addPage(String link, String linkAU) throws IOException
     {
-        Page result = new Page();
+        Page result = new Page();   //  Page result = null;
         result.setPath("Не добавляем страницу");
         result.setSiteId(-1);
         result.setContent("Не добавляем страницу");
         result.setCode(-1);
-//        Page result = null;
 
         Page pageValues = new Page();
         pageValues.setPath(link);
         pageValues.setSite(site);
         pageValues.setSiteId(site.getId()); // 16 may
 
-        Connection.Response jsoupResponsePage = Jsoup.connect(site.getUrl()).execute();
+        Connection.Response jsoupResponsePage = Jsoup.connect(linkAU).execute(); // Connection.Response jsoupResponsePage = Jsoup.connect(site.getUrl()).execute();
         pageValues.setCode(jsoupResponsePage.statusCode());         // pageValues.setContent(documentToString(Jsoup.connect(page.getSite().getUrl()+path).get()));
         pageValues.setContent(jsoupResponsePage.parse().html());
 
-        boolean tx = TransactionSynchronizationManager.isActualTransactionActive();
+        boolean tx = TransactionSynchronizationManager.isActualTransactionActive(); // TODO: Добавить запись в мое "логирование"
         isIndexingSiteStarted = indexingService.getIndexingStarted();
 
         // Добавленный блок для принудительной индексации страницы:
@@ -326,14 +325,14 @@ public class PageWriter extends RecursiveAction {
                     System.out.println("PW catch in if addPage: " + page.getPath() + " - Выполнено изменение статуса сайта: " + site.getUrl() + " , на: " + site.getStatus());
                 }
             } else
-            {
-                pageRepository.save(pageValues);
-                result = pageValues;
+                {
+                    pageRepository.save(pageValues);
+                    result = pageValues;
 
-                lemmatizationService.indexNewPage(result);  // L-I
+                    lemmatizationService.indexNewPage(result);  // L-I
 
-                System.out.println("Добавлена страница: " + pageValues.getPath() + " (" + linkAU + ")" + " , isIndexedSiteStarted = " + isIndexingSiteStarted);
-            } // if else catch
+                    System.out.println("Добавлена страница: " + pageValues.getPath() + " (" + linkAU + ")" + " , isIndexedSiteStarted = " + isIndexingSiteStarted);
+                } // if else catch
         }
         return result;
     }
@@ -353,7 +352,6 @@ public class PageWriter extends RecursiveAction {
                     throw new InterruptedException();
                 } catch (InterruptedException e)
                 {
-    //                System.err.println("PW catch in if Compute: " + page.getPath());  //*
                     site.setStatus(StatusType.FAILED);
                     siteRepository.save(site);
                     System.err.println("PW catch in if Compute: " + page.getPath() + " - Выполнено изменение статуса сайта: " + site.getUrl() + " , на: " + site.getStatus());
@@ -501,6 +499,8 @@ public class PageWriter extends RecursiveAction {
                 '}';
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /*
     private SiteRepository siteRepository;
