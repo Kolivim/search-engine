@@ -1,13 +1,11 @@
 package searchengine.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import searchengine.dto.statistics.ErrorMessage;
+import searchengine.dto.snippets.SnippetsResponce;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.model.Page;
 import searchengine.services.*;
 
 import java.util.Map;
@@ -82,15 +80,29 @@ public class ApiController {
     }
 
     @GetMapping(value = "/search")
-    public ResponseEntity<Map<String,String>> search(String query, int offset, int limit, String site)   // @RequestParam(value="query", required=false, defaultValue="World")  //   public ResponseEntity<Map<String,String>> search(@RequestParam(value="query") String query, @RequestParam(value="offset") int offset, @RequestParam(value="limit") int limit)   // @RequestParam(value="query", required=false, defaultValue="World")
+    public ResponseEntity<?> search(String query, int offset, int limit, String site)   // ResponseEntity<Map<String,String>> ; ResponseEntity<SnippetsResponce>;  @RequestParam(value="query", required=false, defaultValue="World")  //   public ResponseEntity<Map<String,String>> search(@RequestParam(value="query") String query, @RequestParam(value="offset") int offset, @RequestParam(value="limit") int limit)   // @RequestParam(value="query", required=false, defaultValue="World")
     {
         System.out.println("Передано значение: \"" + query + "\" , offset = " + offset + " , limit = " + limit + " , site = " + site);    // *
 
+        //  4 jule:
+        SnippetsResponce responce = searchService.startSearch(query, offset, limit, site);
+        boolean isSearchSuccess = responce.isResult();
+        if (isSearchSuccess)
+            {return ResponseEntity.ok(responce);}
+                else
+                    {return messageService.searchError();}
+        //
+
+
+        //
+        /*
         boolean isSearchSuccess = searchService.startSearch(query, offset, limit, site);
         if (isSearchSuccess)
             {return messageService.searchOk();}
                 else
                     {return messageService.searchError();}
+         */
+                //
 
     }
 

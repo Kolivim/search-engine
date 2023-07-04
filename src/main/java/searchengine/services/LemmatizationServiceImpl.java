@@ -213,7 +213,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
     }
 
     @Override
-    public void getSnippet(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, /*ArrayList<Lemma> lemmas,*/ Set<String> lemmasList)
+    public LinkedHashMap<Page, String> getSnippet(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, /*ArrayList<Lemma> lemmas,*/ Set<String> lemmasList)
     {
         System.out.println("В методе getSnippet() класса LemmServImpl - Передан sortedAbsoluteRelevancePages страниц с их абсолютной релевантностью: \n[ " + sortedAbsoluteRelevancePages + " ]"); // *
 
@@ -286,7 +286,10 @@ public class LemmatizationServiceImpl implements LemmatizationService
             sortedAbsoluteRelevancePagesSnippet.put(pageSearch, contentPageSnippet);
             //
         }
+
         System.out.println("В методе getSnippet() класса LemmServImpl - Получен sortedAbsoluteRelevancePagesSnippet страниц с текстом выделенных snippet: \n[ " + sortedAbsoluteRelevancePagesSnippet + " ]"); // *
+
+        return sortedAbsoluteRelevancePagesSnippet;
     }
 
     public String getSnippetPage(ArrayList<String> contentPage, Set<String> lemmasList, int countLemmaOnPage, ArrayList<Integer> lemmasIndex) // TODO: Переписать с выделением в отдельные методы до 30 строк длиной !!! Проанализировать как убрать повтор кода !!!

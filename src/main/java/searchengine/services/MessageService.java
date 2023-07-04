@@ -3,6 +3,7 @@ package searchengine.services;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import searchengine.dto.snippets.SnippetsResponce;
 
 import java.util.Map;
 import java.util.TreeMap;

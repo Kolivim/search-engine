@@ -16,5 +16,5 @@ public interface LemmatizationService
     public void indexNewPage(Page page);
     public void deleteSiteIndexAndLemma(Site site);
     public HashMap<String, Integer> splitLemmasText(String text) throws IOException;    // SEARCH STAGE 24 june
-    public void getSnippet(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, /*ArrayList<Lemma> lemmas,*/ Set<String> lemmasList);   // SEARCH STAGE 30 june
+    public LinkedHashMap<Page, String> getSnippet(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, /*ArrayList<Lemma> lemmas,*/ Set<String> lemmasList);   // SEARCH STAGE 30 june
 }

@@ -1,9 +1,22 @@
 package searchengine.services;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
+import org.xml.sax.InputSource;
+import searchengine.dto.snippets.DetailedSnippetsItem;
+import searchengine.dto.snippets.SnippetsData;
+import searchengine.dto.snippets.SnippetsResponce;
+import searchengine.dto.statistics.DetailedStatisticsItem;
+import searchengine.dto.statistics.StatisticsData;
+import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.model.*;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,16 +42,21 @@ public class SearchService
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
     }
-    public boolean startSearch(String query, int offset, int limit, String site)
+    public SnippetsResponce startSearch(String query, int offset, int limit, String site)   // boolean
     {
+        SnippetsResponce responce = new SnippetsResponce();
+        responce.setResult(false);  // TODO: Проверка на ошибку - далее меняем на осмысленный ответ, при его получении !!!
         if (site != null)
         {
             System.out.println("Получен запрос по поиску на единственной странице: " + site); // *
-            if (isSiteIndexed(site))
+            if (isSiteIndexed(site))    // TODO: Исправить методпроверки isSiteIndexed() - стоит заглушка для возврата "true" !!!
             {
                 System.out.println("Сайт: " + site + " - проиндексирован, выполняем поиск лемм по запросу: " + query); // *
-                searchOnSite(query, offset, limit, site);
-            }
+                responce = searchOnSite(query, offset, limit, site);
+            }   else    // TODO: Написать код для передачи ошибки !!!
+                {
+                    System.out.println("Сайт: " + site + " - НЕ проиндексирован, ОШИБКА !!! поиск не выполняется: " + query); // *
+                }
         }   else
                 {
                     System.out.println("Получен запрос по поиску на всех страницах"); // *
@@ -53,10 +71,10 @@ public class SearchService
                     }
                     //
                 }
-        return true;    // TODO: Добавить возврат false при ошибке
+        return responce;    // TODO: Добавить возврат false при ошибке
     }
 
-    public void searchOnSite(String query, int offset, int limit, String site)
+    public SnippetsResponce searchOnSite(String query, int offset, int limit, String site) // void
     {
         try
         {
@@ -82,12 +100,36 @@ public class SearchService
                 System.out.println("В методе searchOnSite() - Получены отсортированные страницы с леммами и их absoluteRelevance: " + sortedAbsoluteRelevancePages); // *
                 //
 
-                //Получение сниппетов:
-                lemmatizationService.getSnippet(sortedAbsoluteRelevancePages, /*lemmas,*/ lemmasList);
+                // Получение сниппетов:
+                LinkedHashMap<Page, String> sortedAbsoluteRelevancePagesSnippet = lemmatizationService.getSnippet(sortedAbsoluteRelevancePages, /*lemmas,*/ lemmasList);
+                //
+
+                // TODO: Создание и сбор в связанный список DTO по snippet:
+                System.out.println("\nВ методе searchOnSite() получен из метода getSnippetDTO() ArrayList<DetailedSnippetsItem>:\n [ " + getSnippetDTO(sortedAbsoluteRelevancePages, sortedAbsoluteRelevancePagesSnippet) + " ]");  // *
+
+                //
+                SnippetsResponce response = new SnippetsResponce(getSnippetDTO(sortedAbsoluteRelevancePages, sortedAbsoluteRelevancePagesSnippet)); // new SnippetsResponce() - ОК !!!
+                //SnippetsData data = new SnippetsData(getSnippetDTO(sortedAbsoluteRelevancePages, sortedAbsoluteRelevancePagesSnippet));
+//                data.setDetailed(getSnippetDTO(sortedAbsoluteRelevancePages, sortedAbsoluteRelevancePagesSnippet));
+//                data.setCount();
+                //response.setSnippets(data);   // ОК !!!
+                //response.setResult(true);   // TODO: Может сделать проверкой ввиде ответа метода ???
+
+                System.out.println("\nВ методе searchOnSite() отправляем SnippetsResponce: [\n" + response + "\n]");  // *
+
+                return response;
+                //
+
                 //
             } else
-                {
+                {   // TODO: Исправить ответ согласно ТЗ!!! Может имеет смысл в startSearch() выполнять проверки по response.setResult(false) и выдавать ответ в API ???
                     System.out.println("В методе searchOnSite() - Получен пустой список страниц с леммами (подсчет релевантности не проводим): " + " :\n" + lemmaPages); // *
+                    SnippetsResponce response = new SnippetsResponce();
+                    SnippetsData data = new SnippetsData(new ArrayList<>());
+                    //response.setSnippets(data);   // ОК !!!
+                    response.setResult(false);
+                    System.out.println("\nВ методе searchOnSite() отправляем SnippetsResponce: [\n" + response + "\n]");  // *
+                    return response;
                 }
             //
 
@@ -95,17 +137,30 @@ public class SearchService
         {
             System.err.println("Сработал catch в методе startSearch в классе SearchService: " + e);
         }
+
+        System.out.println("\nВ методе searchOnSite() дошли до \"return null\" в конце метода - ОШИБКА !!!");  // *
+        return null;   // TODO: Определиться какой ответ нужен и исправить ??? Проверить не получаю ли ошибку из-за возврата null - м.б. что-то другое вида SnippetsResponce возвращать ???
     }
 
-    public LinkedHashMap<Page, String> getSnippetOnPages(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages)
+    public List<DetailedSnippetsItem> getSnippetDTO(LinkedHashMap<Page, Float> sortedAbsoluteRelevancePages, LinkedHashMap<Page, String> sortedAbsoluteRelevancePagesSnippet)
     {
+        List<DetailedSnippetsItem> detailed = new ArrayList<>();
         for(Page pageSearch : sortedAbsoluteRelevancePages.keySet())
         {
+            DetailedSnippetsItem item = new DetailedSnippetsItem();
+            item.setRelevance(sortedAbsoluteRelevancePages.get(pageSearch));
+            item.setUri(pageSearch.getPath());
+            item.setSnippet(sortedAbsoluteRelevancePagesSnippet.get(pageSearch));
 
+            Document doc = Jsoup.parse(pageSearch.getContent());
+            item.setTitle(doc.title());
+
+            item.setSite(pageSearch.getSite().getUrl());
+            item.setSiteName(pageSearch.getSite().getName());
+
+            detailed.add(item);
         }
-
-
-        return new LinkedHashMap<Page, String>();
+        return detailed;
     }
 
     public LinkedHashMap<Page, Float> getSortedAbsoluteRelevancePages(HashMap<Page, Float> relevancePages)
@@ -118,7 +173,6 @@ public class SearchService
                          (a, b) -> { throw new AssertionError(); },
                          LinkedHashMap::new
                  ));
-
 
 //*        System.out.println("В методе getSortedAbsoluteRelevancePages() - Получены отсортированные страницы с леммами и их absoluteRelevance: " +
 //*                            sortedMap + "\n Построчно:"); // *
@@ -145,7 +199,6 @@ public class SearchService
 
     public Float getMaxRelevancePages(HashMap<Page, Float> relevancePages)
     {
-
         Page maxRelevancePages = Collections.max(
                 relevancePages.entrySet(),
                 new Comparator<Map.Entry<Page, Float>>()
@@ -406,5 +459,24 @@ public class SearchService
         }
 
         return lemmasPages;
+    }
+    */
+
+
+
+    /*
+    public static Document getDocumentPage(String content) throws Exception
+    {
+        DocumentBuilder builder = getDocumentBuilder();
+        Document document = builder.parse(new InputSource(new StringReader(content)));
+        return document;
+    }
+
+    public static DocumentBuilder getDocumentBuilder() throws ParserConfigurationException
+    {
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        DocumentBuilder builder = builderFactory.newDocumentBuilder();
+        return builder;
     }
     */
