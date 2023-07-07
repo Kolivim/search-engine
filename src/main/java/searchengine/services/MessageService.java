@@ -65,12 +65,25 @@ public class MessageService
         return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.OK);
     }
 
-    public ResponseEntity<Map<String,String>> searchError()    // TODO: Переписать на возврат требуемого значения
+    public ResponseEntity<Map<String,String>> searchError(SnippetsResponce responce)    // TODO: Переписать на возврат требуемого значения
     {
         messageList.clear();
         messageList.put("result", "false");
-        messageList.put("error", "Задан пустой поисковый запрос");
-        messageList.put("error", "Индексация сайта не завершена");
+
+        switch (responce.getCount())
+        {
+            case -1:messageList.put("error", "Индексация сайта не завершена");
+                break;
+            case -2:
+                messageList.put("error", "Задан пустой поисковый запрос");
+                break;
+            default:
+                System.out.println("Ошибка - передано не отслеживаемое значение");  // *
+                break;
+        }
+
+        //messageList.put("error", "Задан поисковый запрос на не поддерживаемом языке");    // TODO: Дописать проверку в SearchService !!!
+
         return new ResponseEntity<Map<String,String>>(messageList, HttpStatus.valueOf(501));
     }
 }

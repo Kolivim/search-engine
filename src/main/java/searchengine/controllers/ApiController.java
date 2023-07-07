@@ -49,7 +49,7 @@ public class ApiController {
     @GetMapping(value = "/startIndexing" /* , produces = MediaType.APPLICATION_JSON_VALUE */ )
     public ResponseEntity<Map<String,String>> startIndexing()
     {
-        StatisticsResponse response = statisticsService.getStatistics();    // Убрать м.б.?
+        //StatisticsResponse response = statisticsService.getStatistics();    // Убрать м.б.?
         boolean isIndexing = indexingService.startIndexing();
         if (isIndexing)
             {return messageService.startIndexingOk();}
@@ -60,7 +60,7 @@ public class ApiController {
     @GetMapping(value = "/stopIndexing")
     public ResponseEntity<Map<String,String>> stopIndexing()
     {
-        StatisticsResponse response = statisticsService.getStatistics();    // Убрать отсюда?
+        //StatisticsResponse response = statisticsService.getStatistics();    // Убрать отсюда?
         boolean isIndexing = indexingService.stopIndexing();
         if (isIndexing)
             {return messageService.stopIndexingOk();}
@@ -90,7 +90,7 @@ public class ApiController {
         if (isSearchSuccess)
             {return ResponseEntity.ok(responce);}
                 else
-                    {return messageService.searchError();}
+                    {return messageService.searchError(responce);}
         //
 
 

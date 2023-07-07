@@ -275,7 +275,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
             if(!builder.isEmpty()) {contentPage.add(builder.toString());}
             //
 
-            // TODO: Здесь вызываем getSnippetPage(), в котором в т.ч. оборачиваем в <div> и добавляем результат в сортированный список:
+            // TODO: Здесь вызываем getSnippetPage(), в котором в т.ч. добавляем результат в сортированный список:
             int countLemmaOnPage = lemmasIndex.size(); // TODO: Добавить проверку найдены ли леммы - если их  - пропускаем подсчет и выводим ошибку поиска лемм на странице
             System.out.println("В методе getSnippet() класса LemmServImpl - Получен list текста страницы с выделенной леммой: " + contentPage); // *
             String contentPageSnippet = getSnippetPage(contentPage, lemmasList,countLemmaOnPage, lemmasIndex);   // TODO: Передать вырезанный сниппет страницы дальше
@@ -336,14 +336,14 @@ public class LemmatizationServiceImpl implements LemmatizationService
                     snippetEnd = snippetEnd.concat(partSnippet);
                     contentLength -= partSnippet.length();
                     excludedIndexEnd++;
-                    lemmasIndexSearch.remove((Integer)indexPreEnd);  //  3 june
+                    lemmasIndexSearch.remove((Integer)indexPreEnd);
                 }
             }
             int indexEndLemma = contentPage.size() - 1;
             snippetEnd = snippetEnd.concat(contentPage.get(contentPage.size()-1));
             contentLength -= contentPage.get(indexEndLemma).length();
             excludedIndexEnd++;
-            lemmasIndexSearch.remove((Integer)indexEndLemma);  //  3 june
+            lemmasIndexSearch.remove((Integer)indexEndLemma);
 
         } else
             {
@@ -364,7 +364,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
                             snippetEnd = snippetEnd.concat(partSnippet);
                             contentLength -= partSnippet.length();
                             excludedIndexEnd++;
-                            lemmasIndexSearch.remove((Integer)indexPrePreEnd);  //  3 june
+                            lemmasIndexSearch.remove((Integer)indexPrePreEnd);
                         }
                 }
                 //
@@ -375,7 +375,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
                 snippetEnd = snippetEnd.concat(" ").concat(partSnippet1).concat(" ");
                 contentLength -= partSnippet1.length();
                 excludedIndexEnd++;
-                lemmasIndexSearch.remove((Integer)indexEndLemma);  //  3 june
+                lemmasIndexSearch.remove((Integer)indexEndLemma);
                 //
 
                 //
@@ -386,14 +386,14 @@ public class LemmatizationServiceImpl implements LemmatizationService
                     snippetEnd = snippetEnd.concat(partSnippet);
                     contentLength -= partSnippet.length();
                     excludedIndexEnd++;
-                    lemmasIndexSearch.remove((Integer) indexEnd);  //  3 june
+                    lemmasIndexSearch.remove((Integer) indexEnd);
                 } else
                     {
                         String partSnippet = contentPage.get(indexEnd);
                         snippetEnd = snippetEnd.concat(partSnippet);
                         contentLength -= partSnippet.length();
                         excludedIndexEnd++;
-                        lemmasIndexSearch.remove((Integer)indexEnd);  //  3 june
+                        lemmasIndexSearch.remove((Integer)indexEnd);
                     }
                 //
             }
@@ -688,6 +688,12 @@ public class LemmatizationServiceImpl implements LemmatizationService
         for (Iterator<String> splitTextIterator = Arrays.stream(splitText).iterator(); splitTextIterator.hasNext(); )
         {
             String unrefinedWord = splitTextIterator.next();
+
+            if(unrefinedWord.isBlank() || unrefinedWord.isEmpty())  // Jule 5
+            {
+                continue;
+            }
+
             if(isRussianServicePartsText(unrefinedWord))
                 {
                     continue; // TODO: Проверить срабатывает ли сброс прохождения дальнейшего кода в цикле ???
@@ -715,7 +721,7 @@ public class LemmatizationServiceImpl implements LemmatizationService
     private boolean isRussianServicePartsText(String unrefinedWord) // TODO: Найти описание библиотеки и заменить
     {
         boolean isServicePartsText= false;
-        List<String> wordMorphInfos = luceneMorph.getMorphInfo(unrefinedWord);
+        List<String> wordMorphInfos = luceneMorph.getMorphInfo(unrefinedWord);  // luceneMorph.getNormalForms() ???
         for (String wordMorphInfo : wordMorphInfos)
         {
             if(isServicePartsText) {continue;}

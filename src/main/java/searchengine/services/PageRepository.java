@@ -50,6 +50,9 @@ public interface PageRepository extends CrudRepository<Page, Integer>
         void deleteByPathAndSiteId(String path, int siteId);
 
         Page findByPathAndSite(String path, Site site);
+
+        Integer countBySiteId( int siteId); // 6 jule
+
 }
 
 

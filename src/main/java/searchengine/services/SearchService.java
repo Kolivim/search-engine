@@ -44,34 +44,93 @@ public class SearchService
     }
     public SnippetsResponce startSearch(String query, int offset, int limit, String site)   // boolean
     {
-        SnippetsResponce responce = new SnippetsResponce();
-        responce.setResult(false);  // TODO: Проверка на ошибку - далее меняем на осмысленный ответ, при его получении !!!
+//        SnippetsResponce response = new SnippetsResponce();
+//        response.setResult(false);  // TODO: Проверка на ошибку - далее меняем на осмысленный ответ, при его получении !!!
+
+        if(query.isEmpty() || query.isBlank())
+            {
+                System.out.println("В запросе передана пустая строка: " + query); // *
+                SnippetsResponce response = new SnippetsResponce();
+                response.setResult(false);
+                response.setCount(-2);  // Эмуляция ответа ошибки с №2 - сайт(ы) не проиндексированы
+                System.out.println("\nВ методе startSearch() ошибка №2 - отправляем SnippetsResponce: [\n" + response + "\n]");  // *
+                return response;
+            }
+
         if (site != null)
         {
             System.out.println("Получен запрос по поиску на единственной странице: " + site); // *
             if (isSiteIndexed(site))    // TODO: Исправить методпроверки isSiteIndexed() - стоит заглушка для возврата "true" !!!
             {
                 System.out.println("Сайт: " + site + " - проиндексирован, выполняем поиск лемм по запросу: " + query); // *
-                responce = searchOnSite(query, offset, limit, site);
-            }   else    // TODO: Написать код для передачи ошибки !!!
+//                response = searchOnSite(query, offset, limit, site);
+                SnippetsResponce response = searchOnSite(query, offset, limit, site);
+                System.out.println("\nВывод SnippetsResponce responce:\n" + response + " , для запроса: " + query); // *
+                return response;
+            }  else    // TODO: Написать код для передачи ошибки !!!
                 {
                     System.out.println("Сайт: " + site + " - НЕ проиндексирован, ОШИБКА !!! поиск не выполняется: " + query); // *
+                    SnippetsResponce response = new SnippetsResponce();
+                    response.setResult(false);
+                    response.setCount(-1);  // Эмуляция ответа ошибки с №1 - сайт(ы) не проиндексированы
+                    System.out.println("\nВ методе startSearch() ошибка №1 - отправляем SnippetsResponce: [\n" + response + "\n]");  // *
+                    return response;
                 }
         }   else
                 {
                     System.out.println("Получен запрос по поиску на всех страницах"); // *
 
-                    // TODO: Написать код !!!
-                    if (isSiteIndexed(site))
+                    // TODO: Исправить - Раскомментировать после отладки кода !!!
+                    if (/*isSiteIndexed(site)*/ true)
                     {
                         System.out.println("Сайты проиндексированы, выполняем поиск лемм по запросу: " + query); // *
 
-                        // TODO: Здесь ищем леммы по всем сайтам
+                        // TODO: Здесь ищем леммы по всем сайтам, 5 jule:
+                        ArrayList<SnippetsResponce> responceSites = new ArrayList<>();
+                        Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
+                        for (searchengine.model.Site siteDB : siteIterable)
+                        {
+                            SnippetsResponce responceSite = searchOnSite(query, offset, limit, siteDB.getUrl());
+                            responceSites.add(responceSite);
+                        }
+
+                        // Здесь создаем новый объединенный SnippetsResponce и выполнить в нем сортировку заново:
+
+                        //S_start
+                        ArrayList<DetailedSnippetsItem> dataSites = new ArrayList<>();
+                        for(SnippetsResponce responceSite : responceSites)
+                        {
+                            if(responceSite.isResult())
+                            {
+                                dataSites.addAll(responceSite.getData());
+                            }
+                        }
+
+                        // TODO: Выполнить здесь сортировку полученного ArrayList<DetailedSnippetsItem> dataSites:
+                        Collections.sort(dataSites, Comparator.comparing(DetailedSnippetsItem::getRelevance));
+                        Collections.reverse(dataSites);
+                        System.out.println("\nВывод отсортированного по убыванию relevance ArrayList<DetailedSnippetsItem> dataSites:\n" + dataSites); // *
                         //
-                    }
+
+                        SnippetsResponce responceAllSites = new SnippetsResponce(dataSites);
+                        System.out.println("\nВывод SnippetsResponce responceAllSites:\n" + responceAllSites); // *
+                        //S_end
+
+                        return responceAllSites;
+
+                        //
+                    } else    // TODO: Написать код для передачи ошибки !!!
+                        {
+                            System.out.println("В списке есть НЕ проиндексированный(е) сайт(ы): " + site + " - ОШИБКА !!! поиск не выполняется: " + query); // *
+                            SnippetsResponce response = new SnippetsResponce();
+                            response.setResult(false);
+                            response.setCount(-1);  // Эмуляция ответа ошибки с №1 - сайт(ы) не проиндексированы
+                            System.out.println("\nВ методе startSearch() ошибка №1 - отправляем SnippetsResponce: [\n" + response + "\n]");  // *
+                            return response;
+                        }
                     //
                 }
-        return responce;    // TODO: Добавить возврат false при ошибке
+        //return responce;    // TODO: Добавить возврат false при ошибке - как все варианты if-else пройду и пропишу в них return по идее можно будет убрать !!!
     }
 
     public SnippetsResponce searchOnSite(String query, int offset, int limit, String site) // void
@@ -125,7 +184,7 @@ public class SearchService
                 {   // TODO: Исправить ответ согласно ТЗ!!! Может имеет смысл в startSearch() выполнять проверки по response.setResult(false) и выдавать ответ в API ???
                     System.out.println("В методе searchOnSite() - Получен пустой список страниц с леммами (подсчет релевантности не проводим): " + " :\n" + lemmaPages); // *
                     SnippetsResponce response = new SnippetsResponce();
-                    SnippetsData data = new SnippetsData(new ArrayList<>());
+                    //SnippetsData data = new SnippetsData(new ArrayList<>());
                     //response.setSnippets(data);   // ОК !!!
                     response.setResult(false);
                     System.out.println("\nВ методе searchOnSite() отправляем SnippetsResponce: [\n" + response + "\n]");  // *
@@ -235,7 +294,7 @@ public class SearchService
             return relativeRelevance;
         }
 
-    public ArrayList<Page> getPagesSearchList(ArrayList<Lemma> lemmas, String  site)    // TODO: Исправить возврат непустых списков при отсутсвтующих леммах на странице
+    public ArrayList<Page> getPagesSearchList(ArrayList<Lemma> lemmas, String  site)    // TODO: Исправить возврат непустых списков при отсутствующих леммах на странице
     {
         /**/Site siteSearch = siteRepository.findByUrl(site);
         ArrayList<Page> lemmasPages = new ArrayList<>();
@@ -326,6 +385,34 @@ public class SearchService
         }
         return pagesWithLemma;
     }
+
+    /*
+    public ArrayList<Page> getPageSitesWithLemmas(Lemma lemma, ArrayList<Page> pagesWithLemmas)
+    {
+        int lemmmaFindId = lemma.getId();
+        int siteId = site.getId();
+        List<Page> pages;
+
+        if(pagesWithLemmas.isEmpty())
+        {pages = pageRepository.findAllBySiteId(siteId);}
+        else {pages = pagesWithLemmas;}
+
+        ArrayList<Page> pagesWithLemma = new ArrayList<>();
+        for (Page page : pages)
+        {
+            int pageId  = page.getId();
+            Optional<Index> indexLemmaSiteSearch = indexRepository.findByPageIdAndLemmaId(pageId,lemmmaFindId);
+            if(indexLemmaSiteSearch.isPresent())
+            {
+                pagesWithLemma.add(page);
+
+                System.out.println("В классе SearchService в методе  getPageWithLemma() при поиске леммы: " + lemma +
+                        " - добавлена страница: " + page.getPath() + " / [" + page.getSiteId() + "]");
+            }
+        }
+        return pagesWithLemma;
+    }
+    */
 
     public ArrayList<Lemma> getLemma(Set<String> lemmasList, String  site)
     {
