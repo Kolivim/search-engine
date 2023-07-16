@@ -10,14 +10,13 @@ import javax.persistence.*;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name="lemma")
-public class Lemma
-{
+@Table(name = "lemma")
+public class Lemma {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "site_id", nullable = false /*, insertable = false, updatable = false*/)
+    @Column(name = "site_id", nullable = false)
     private int siteId;
 
     @Column(nullable = false)
@@ -26,25 +25,22 @@ public class Lemma
     @Column(nullable = false)
     private int frequency;
 
-    public Lemma(int siteId, String lemma, int frequency)
-    {
+    public Lemma(int siteId, String lemma, int frequency) {
         this.siteId = siteId;
         this.lemma = lemma;
         this.frequency = frequency;
     }
-    public void frequencyLemmaIncr()
-    {
-       this.frequency++;
+
+    public void frequencyLemmaIncr() {
+        this.frequency++;
     }
 
-    public void frequencyLemmaDecr()
-    {
+    public void frequencyLemmaDecr() {
         this.frequency--;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "Lemma:[" +
                 " id = " + id +
                 ", siteId = " + siteId +

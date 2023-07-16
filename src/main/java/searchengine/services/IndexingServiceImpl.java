@@ -1,32 +1,31 @@
 package searchengine.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.StatusType;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
+@Slf4j
 @Service
-public class IndexingServiceImpl implements IndexingService
-{
-    private SiteRepository siteRepository;  //    @Autowired
-    private PageRepository pageRepository;  //    @Autowired
-    private LemmatizationService lemmatizationService;  // L-I
-    boolean isIndexingStarted = false;    // Flag from indexing status in API
+public class IndexingServiceImpl implements IndexingService {
+    private SiteRepository siteRepository;
+    private PageRepository pageRepository;
+    private LemmatizationService lemmatizationService;
+    boolean isIndexingStarted = false;  //TODO: Сделать private полем
     private final SitesList sites;
-    ResultCheckerParse resultCheckerExample;    //1
-    Stack<RunnableFuture<Boolean>> taskList = new Stack<>(); // 29
-    List<StartIndexing> listStartIndexing = new ArrayList<>(); //    5.06
-    ExecutorService executor;   //29
+    ResultCheckerParse resultCheckerExample;  //TODO: Сделать private полем???
+    Stack<RunnableFuture<Boolean>> taskList = new Stack<>();  //TODO: Сделать private полем???
+    List<StartIndexing> listStartIndexing = new ArrayList<>();  //TODO: Сделать private полем???
+    ExecutorService executor;  //TODO: Сделать private полем???
 
     @Autowired
-    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository, SitesList sites, LemmatizationService lemmatizationService)
-    {   // this.startIndexing = startIndexing;
+    public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository,
+                               SitesList sites, LemmatizationService lemmatizationService) {
         this.sites = sites;
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
@@ -34,175 +33,104 @@ public class IndexingServiceImpl implements IndexingService
     }
 
     @Override
-    public boolean startIndexing()
-    {
-        // Блок Б1
-        System.out.println("\nЗапущен метод startIndexing");
-
-        if(!isIndexingStarted)
-        {
+    public boolean startIndexing() {
+        log.info("Запущен метод startIndexing");
+        if (!isIndexingStarted) {
             isIndexingStarted = true;
 
-            // Блок Б2 с удалением сайта из таблицы sites
-            for (Site site : sites.getSites())
-            {
-                System.out.println(site);
-                Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-                for (searchengine.model.Site siteDB : siteIterable)
-                {
-                    if (site.getUrl().equals(siteDB.getUrl()))
-                    {
-                        // Удаляем сначала index потом lemma по site:
-                        lemmatizationService.deleteSiteIndexAndLemma(siteDB);
-                        //
+            removeSites();
+            saveSites();
 
-                        siteRepository.delete(siteDB);
-                        System.out.println("\nВыполнено удаление сайта: " + site.getUrl());
-                    }
-                }
-            }
-
-            // Блок Б3.2/2
-            for (Site site : sites.getSites())
-            {
-                searchengine.model.Site siteDB = new searchengine.model.Site();
-                siteDB.setName(site.getName());
-                siteDB.setUrl(site.getUrl());
-                siteDB.setStatus(StatusType.INDEXING);
-                siteDB.setStatusTime(new Date());
-                siteRepository.save(siteDB);
-
-                System.out.println("Выполнено сохранение сайта " + site);   //*
-            }
-
-//        Stack<RunnableFuture<Boolean>> taskList = new Stack<>();  //29
             Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-            for (searchengine.model.Site siteDB : siteIterable)
-            {
-                // /*
-                //Вар.3
+            for (searchengine.model.Site siteDB : siteIterable) {
                 StartIndexing value = new StartIndexing(siteDB);
                 RunnableFuture<Boolean> futureValue = new FutureTask<>(value);
                 listStartIndexing.add(value);
                 taskList.add(futureValue);
-                System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-                // */
+                log.info("Выполнено добавление сайта: {} в FJP/Future", siteDB);
             }
 
-//        ExecutorService executor = Executors.newFixedThreadPool(4); // //29
             executor = Executors.newFixedThreadPool(4); // TODO : Внести количество потоков с привязкой к количеству сайтов
             taskList.forEach(executor::execute);
 
-//        ResultCheckerParse resultCheckerExample = new ResultCheckerParse(taskList);   //1 рабочее
-            resultCheckerExample = new ResultCheckerParse(taskList);  //1 рабочее
-//        resultCheckerExample = new ResultCheckerParse();
-
+            resultCheckerExample = new ResultCheckerParse(taskList);
             executor.execute(resultCheckerExample);
-
             executor.shutdown();
 
-//        isIndexingStarted = false; // Завершать нужно по завершению потоков - RCP
-
-            System.out.println("\nЗавершение выполнившегося метода startIndexing в классе IndexingServiceImpl");    //*
+            log.info("Завершение выполнившегося метода startIndexing в классе IndexingServiceImp");
             return true;
-        } else
-            {
-                System.out.println("\nISImpl - Ошибка: Индексация уже запущена");   //*
-                return false;
-            }
+        } else {
+            log.error("ISImpl - Ошибка: Индексация уже запущена");
+            return false;
+        }
     }
 
-    @Override
-    public boolean stopIndexing()
-    {
-        System.out.println("\nЗапущен метод stopIndexing в классе IndexingServiceImpl");
-        if(isIndexingStarted)
-            {
-                // Блок на пробу с присвоением indexingStatus SiteDB
-                // /*
-               Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
-                for (searchengine.model.Site siteDB : siteIterable)
-                {
-                    if(siteDB.getStatus().equals(StatusType.INDEXING))
-                    {
-                        siteDB.setStatus(StatusType.FAILED);
-                        siteRepository.save(siteDB);
-                        System.out.println("\nВ классе IndexingServiceImpl в методе stopIndexing() выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
-                    }
+    public void removeSites() {
+        for (Site site : sites.getSites()) {
+            log.info("Запуск метода removeSites(), передан SitesList: {}", sites);
+            Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
+            for (searchengine.model.Site siteDB : siteIterable) {
+                if (site.getUrl().equals(siteDB.getUrl())) {
+                    lemmatizationService.deleteSiteIndexAndLemma(siteDB);
+                    siteRepository.delete(siteDB);
+                    log.info("Выполнено удаление сайта: {}", site.getUrl());
                 }
-                // */
+            }
+        }
+    }
 
-                // June 11
-                isIndexingStarted = false;
-                //
-                //
-                resultCheckerExample.setIndexingStopped(true);
-                //
-                for (StartIndexing value : listStartIndexing)
-                {
-                    value.cancel();
-                }  //  5.06
-                //
-
-                System.out.println("\nКласс IndexingServImp метод stopIndexing - выполнена передача значения true сеттеру setIndexingStopped");
-                List<Runnable> notExecuted = executor.shutdownNow();
-
-
-                System.out.println("\nЛист невыполненных задач: " + notExecuted);
-
-                //
-                // isIndexingStarted = false;  // перенести внутрь остановки ???
-                System.out.println("\nВ классе IndexingServImpl завершение метода stopIndexing(), значение isIndexingStarrted=" + isIndexingStarted);
-                //
-
-                return true;
-            } else {return false;}
+    public void saveSites() {
+        for (Site site : sites.getSites()) {
+            searchengine.model.Site siteDB = new searchengine.model.Site();
+            siteDB.setName(site.getName());
+            siteDB.setUrl(site.getUrl());
+            siteDB.setStatus(StatusType.INDEXING);
+            siteDB.setStatusTime(new Date());
+            siteRepository.save(siteDB);
+            log.info("Выполнено сохранение в БД сайта: {}", site);
+        }
     }
 
     @Override
-    public void setIndexingStarted(boolean indexingStarted) {isIndexingStarted = indexingStarted;}  //28
-    @Override
-    public boolean getIndexingStarted(){return isIndexingStarted;}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-            /*
-            // Вар.2
-            RunnableFuture<Boolean> futureValue = null;
-            try
-            {
-                futureValue = new FutureTask<>(new ForkJoinPool().invoke(new PageWriter(siteDB)));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+    public boolean stopIndexing() {
+        log.info("Запущен метод stopIndexing");
+        if (isIndexingStarted) {
+            setSitesStatus(StatusType.INDEXING, StatusType.FAILED, "Индексация остановлена пользователем");
+            isIndexingStarted = false;
+            resultCheckerExample.setIndexingStopped(true);
+            for (StartIndexing value : listStartIndexing) {
+                value.cancel();
             }
-            taskList.add(futureValue);
-            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-            */
+            log.info("В методе stopIndexing() - выполнена передача значения true сеттеру setIndexingStopped");
+            List<Runnable> notExecuted = executor.shutdownNow();
+            log.info("Завершение метода stopIndexing(), значение isIndexingStarrted: {}, " +
+                    "лист невыполненных задач: {}", isIndexingStarted, notExecuted);
+            return true;
+        } else {
+            return false;
+        }
+    }
 
+    public void setSitesStatus(StatusType statusTypeBefore, StatusType statusTypeAfter, String info) {
+        Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
+        for (searchengine.model.Site siteDB : siteIterable) {
+            if (siteDB.getStatus().equals(statusTypeBefore)) {
+                siteDB.setStatus(statusTypeAfter);
+                siteDB.setLastError(info);
+                siteRepository.save(siteDB);
+                log.info("В методе setSitesStatus() выполнено присвоение сайту {} статуса индексации: {}",
+                        siteDB, siteDB.getStatus());
+            }
+        }
+    }
 
+    @Override
+    public void setIndexingStarted(boolean indexingStarted) {
+        isIndexingStarted = indexingStarted;
+    }
 
-// 11 june
-//                try
-//                {
-//                    executor.awaitTermination(1, TimeUnit.DAYS);
-//                } catch (InterruptedException e)
-//                {
-//                    System.err.println("В классе IndexingЫукмШьзд методе compute сработал InterruptedException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на .....:  ");
-//                }
-//
-
-
-
-//            try {
-//                ForkJoinTask<?> result = new ForkJoinTask<?>().adapt((Runnable) new PageWriter(siteDB));
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-
-            /* Рабочий!!!
-            //Вар.1
-            RunnableFuture<Boolean> futureValue = new FutureTask<>(new StartIndexing(siteDB));
-            taskList.add(futureValue);
-            System.out.println("\nВыполнено добавление сайта " + siteDB + " в FJP/Future");
-            */
+    @Override
+    public boolean getIndexingStarted() {
+        return isIndexingStarted;
+    }
+}

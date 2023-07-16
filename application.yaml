@@ -57,3 +57,10 @@
 #        name: DomBulgakova.ru
 #      - url: https://www.drive2.ru/
 #        name: Drive2.Ru
+
+#  logging:
+#    level:
+#      org.springframework.web: TRACE
+#    pattern:
+#      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+#    file: /Users/app.log

@@ -3,8 +3,7 @@ package searchengine.dto.statistics;
 import lombok.Data;
 
 @Data
-public class DetailedStatisticsItem // *** Идентична (кроме lemma) = model.Site
-{
+public class DetailedStatisticsItem {
     private String url;
     private String name;
     private String status;

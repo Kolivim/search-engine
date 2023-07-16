@@ -1,7 +1,8 @@
 package searchengine.services;
 
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import lombok.extern.slf4j.Slf4j;
 import searchengine.model.Site;
 import searchengine.model.StatusType;
 
@@ -9,112 +10,81 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @NoArgsConstructor
-public class StartIndexing implements Callable<Boolean>
-{
+public class StartIndexing implements Callable<Boolean> {
     private IndexingService indexingService;
     private SiteRepository siteRepository;
-    private Site siteDB;    // p
-    private ForkJoinPool forkJoinPool = new ForkJoinPool(); // p
+    private Site siteDB;
+    private ForkJoinPool forkJoinPool = new ForkJoinPool();
     private boolean isIndexingStarted = true;
 
-    public StartIndexing(Site siteDB)
-    {
+    public StartIndexing(Site siteDB) {
         this.siteDB = siteDB;
         indexingService = (IndexingService) SpringUtils.ctx.getBean(IndexingServiceImpl.class);
     }
+
     public void setIndexingStarted(boolean indexingStarted) {
         isIndexingStarted = indexingStarted;
     }
 
     @Override
-    public Boolean call() throws Exception
-    {
+    public Boolean call() throws Exception {
         siteRepository = (SiteRepository) SpringUtils.ctx.getBean(SiteRepository.class);
-//        new ForkJoinPool().invoke(new PageWriter(siteDB));
+
         forkJoinPool.invoke(new PageWriter(siteDB));
-        System.err.println ("\n\nКласс StartIndexing, сайт " + siteDB.getUrl() + " - после forkJoinPool.invoke(new PageWriter(siteDB)) класса SIndexing"
-                        + " , количество страниц по сайту = " + siteDB.getPages().size());  // * (Debug)
+        log.debug("В методе call() - сайт: {} после после forkJoinPool.invoke(new PageWriter(siteDB)) " +
+                "класса SIndexing, количество страниц по сайту: {}", siteDB.getUrl(), siteDB.getPages().size());
 
-        //
-        while (forkJoinPool.getActiveThreadCount()!=0){ Thread.sleep(1500);}
-        //
+        while (forkJoinPool.getActiveThreadCount() != 0) {
+            Thread.sleep(1500);
+        }
 
-        // 29
-        if (Thread.currentThread().isInterrupted())
-            {
-                siteDB.setStatus(StatusType.FAILED);
-                siteRepository.save(siteDB);
-                System.err.println("\nВыполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
-                System.err.println("\n\n\nВызвана остановка потока в методе call() класса StartIndexing для сайта: " + siteDB.getUrl() +
-                        " ,выполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
-                return false;
-            }
-        //
+        if (Thread.currentThread().isInterrupted()) {
+            siteDB.setStatus(StatusType.FAILED);
+            siteDB.setLastError("Индексация остановлена пользователем");
+            siteRepository.save(siteDB);
+            log.info("В методе call() - Вызвана остановка потока для сайта: {}, выполнено изменение статуса " +
+                    "сайта на {}", siteDB.getUrl(), siteDB.getStatus());
+            return false;
+        }
 
         isIndexingStarted = indexingService.getIndexingStarted();
-        if(isIndexingStarted)
-        {
+        if (isIndexingStarted) {
             siteDB.setStatus(StatusType.INDEXED);
             siteRepository.save(siteDB);
-            System.err.println("\nВыполнено изменение статуса сайта: " + siteDB.getUrl() + " , на: " + siteDB.getStatus());
+            log.info("В методе call() - Выполнено изменение статуса сайта: {} на {}",
+                    siteDB.getUrl(), siteDB.getStatus());
         }
-        //
 
-        System.err.println("\nStartIndexing / call() у сайта " + siteDB.getUrl() + " - forkJoinPool.getActiveThreadCount()=" + forkJoinPool.getActiveThreadCount());
+        log.info("Завершение метода call() - Сайт : {} - возвращение true у класса StartIndexing, " +
+                        "количество страниц по сайту = {}, forkJoinPool.getActiveThreadCount() = {}",
+                siteDB.getUrl(), siteDB.getPages().size(), forkJoinPool.getActiveThreadCount());
 
-        // june 11
-        /*
-        boolean isTerminatedPool = forkJoinPool.isTerminated();
-        while (!forkJoinPool.isTerminated()) { System.err.println("\n\n\nВ классе SIndexing методе call результат forkJoinPool.isTerminated() isTerminatedPool: " + forkJoinPool.isTerminated());};
-        boolean isTerminatedPoolIng = forkJoinPool.isTerminating();
-        while (!forkJoinPool.isTerminating()) { System.err.println("\n\n\nВ классе SIndexing методе call результат forkJoinPool.isTerminating() isTerminatedPoolIng: " + forkJoinPool.isTerminating());};
-        System.err.println("\n\n\nВ классе SIndexing методе call результат forkJoinPool.isTerminated() isTerminatedPool: " + isTerminatedPool +
-                    " , В классе SIndexing методе call результат forkJoinPool.isTerminating() isTerminatedPoolIng: " + isTerminatedPoolIng);
-        */
-        //
-
-        // june 11
-        /*
-        try
-        {
-            boolean isTerminatedFJP = forkJoinPool.awaitTermination(1, TimeUnit.HOURS);
-            System.err.println("\n\n\nВ классе SIndexing методе call результат forkJoinPool.awaitTermination isTerminatedFJP: " + isTerminatedFJP);
-        } catch (InterruptedException e)
-        {
-            System.err.println("В классе SIndexing методе call вызове forkJoinPool.awaitTermination сработал InterruptedException(e) ///1 " +
-                    e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " +
-                    e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на сайте:  " + siteDB.getUrl());
-        }
-        */
-        //
-
-        System.out.println ("\nСайт " + siteDB.getUrl() + " - Конец метода call() и возвращение true класса StartIndexing"
-                + " , количество страниц по сайту = " + siteDB.getPages().size());  // * (Debug)
         return true;
     }
 
-    public void cancel()
-    {
-        System.out.println("Вызван метод cancel() в классе StartIndexing у сайта: " + siteDB.getUrl()); // *
+    public void cancel() {
+        log.info("Вызван метод cancel() у сайта: {}", siteDB.getUrl());
         isIndexingStarted = false;
-        System.err.println("\nStartIndexing / cancel() до forkJoinPool.shutdownNow() у сайта " + siteDB.getUrl() + " - forkJoinPool.getActiveThreadCount()=" + forkJoinPool.getActiveThreadCount());
-        //
-        forkJoinPool.shutdownNow();
-        //
-        System.err.println("\nStartIndexing / cancel() после forkJoinPool.shutdownNow() у сайта " + siteDB.getUrl() + " - forkJoinPool.getActiveThreadCount()=" + forkJoinPool.getActiveThreadCount());
-        //
-        // 11 june
-        try
-        {
-            boolean isTerminatedFJP = forkJoinPool.awaitTermination(1, TimeUnit.DAYS);
-            System.out.println("В классе SIndexing методе cancel() результат forkJoinPool.awaitTermination isTerminatedFJP: " + isTerminatedFJP);
-        } catch (InterruptedException e)
-            {
-                System.err.println("В классе SIndexing методе cancel вызове forkJoinPool.awaitTermination сработал InterruptedException(e) ///1 " + e.getMessage() + " ///2 " + e.getStackTrace() + " ///3 " + e.getSuppressed() + " ///4 " + e.getCause() + " ///5 " + e.getLocalizedMessage() + " ///6 " + e.getClass() + " ///7 на сайте:  " + siteDB.getUrl());
-            }
-        //
 
-        System.out.println("Завершен метод cancel() в классе StartIndexing у сайта: " + siteDB.getUrl()); // *
+        log.debug("В методе cancel() - до forkJoinPool.shutdownNow() у сайта: {}, " +
+                "forkJoinPool.getActiveThreadCount() = {}", siteDB.getUrl(), forkJoinPool.getActiveThreadCount());
+        forkJoinPool.shutdownNow();
+        log.debug("В методе cancel() - после forkJoinPool.shutdownNow() у сайта: {}, " +
+                "forkJoinPool.getActiveThreadCount() = {}", siteDB.getUrl(), forkJoinPool.getActiveThreadCount());
+
+        try {
+            boolean isTerminatedFJP = forkJoinPool.awaitTermination(1, TimeUnit.DAYS);
+            log.debug("В методе cancel() - у сайта: {} результат forkJoinPool.awaitTermination = {}, " +
+                            "forkJoinPool.getActiveThreadCount() = {}",
+                    siteDB.getUrl(), isTerminatedFJP, forkJoinPool.getActiveThreadCount());
+
+        } catch (InterruptedException e) {
+            log.error("В методе cancel() - при вызове forkJoinPool.awaitTermination сработал " +
+                    "InterruptedException: {}, у сайта: {}", e, siteDB.getUrl());
+        }
+
+        log.info("Завершен метод cancel() у сайта: {}", siteDB.getUrl());
     }
 }

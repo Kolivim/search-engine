@@ -11,8 +11,7 @@ import javax.persistence.*;
 @NoArgsConstructor
 @Entity
 @Table(name = "\"index\"")
-public class Index
-{
+public class Index {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -26,21 +25,18 @@ public class Index
     @Column(name = "\"rank\"", nullable = false)
     private float rank;
 
-    public Index(int pageId, int lemmaId, float rank)
-    {
+    public Index(int pageId, int lemmaId, float rank) {
         this.pageId = pageId;
         this.lemmaId = lemmaId;
         this.rank = rank;
     }
 
-    public void frequencyIndexIncr()
-    {
+    public void frequencyIndexIncr() {
         this.rank++;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "Index:[" +
                 " id = " + id +
                 ", pageId = " + pageId +

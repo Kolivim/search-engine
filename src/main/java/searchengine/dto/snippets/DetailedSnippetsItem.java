@@ -3,8 +3,7 @@ package searchengine.dto.snippets;
 import lombok.Data;
 
 @Data
-public class DetailedSnippetsItem
-{
+public class DetailedSnippetsItem {
     private String site;
     private String siteName;
     private String uri;
