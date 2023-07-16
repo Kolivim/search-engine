@@ -1,66 +1,38 @@
-  server:
-    port: 8080
+server:
+  port: 8080
 
 
 
-  spring:
-#    spring.h2.console.enable : true   # Новое 11.02 - подключение H2
-    datasource:
-#      driver-class-name: com.mysql.cj.jdbc.Driver
-      username: root
-      password: 171605mEi
-      url:
-#        jdbc:h2:mem:search_engine
-        jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
-#       &useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Moscow
-#      initialization-mode: always   # Новое 12.02 - подключение mysql
-    jpa:
-      properties:
-        hibernate:
-          dialect: org.hibernate.dialect.MySQL8Dialect
+spring:
+  datasource:
+    username: root
+    password: 171605mEi
+    url:
+      jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+
+  jpa:
+    properties:
       hibernate:
-        ddl-auto: create-drop            # update
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: create-drop            # update
 
-        format_sql: true  # журнал
-        user_sql_comments: true     # журнал
+      format_sql: true
+      user_sql_comments: true
 
-        show_sql: true # 29.03
-        generate_statistics: true # 29.03
-        cache:
-          use_structured_entries: true # 29.03
+      show_sql: true
+      generate_statistics: true
+      cache:
+        use_structured_entries: true
 
 
-      #        cache:
-#            use_query_cache: false
+    show-sql: false
 
-      show-sql: false                     # true
-
-#      database-platform: org.hibernate.dialect.MySQL8Dialect
-
-  # example values
-
-  indexing-settings:
-    sites:
-      - url: https://www.lenta.ru
-        name: Лента.ру
-#      - url: https://www.skillbox.ru
-#        name: Skillbox
-      - url: https://www.playback.ru
-        name: PlayBack.Ru
-#      - url: https://www.nikoartgallery.com/
-#        name: NikoArtGallery.com
-#      - url: https://www.svetlovka.ru
-#        name: Svetlovka.ru
-      - url: https://radiomv.ru
-        name: radiomv.ru
-#      - url: https://www.dombulgakova.ru
-#        name: DomBulgakova.ru
-#      - url: https://www.drive2.ru/
-#        name: Drive2.Ru
-
-#  logging:
-#    level:
-#      org.springframework.web: TRACE
-#    pattern:
-#      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-#    file: /Users/app.log
+indexing-settings:
+  sites:
+    - url: https://www.lenta.ru
+      name: Лента.ру
+    - url: https://www.playback.ru
+      name: PlayBack.Ru
+    - url: https://radiomv.ru
+      name: radiomv.ru
