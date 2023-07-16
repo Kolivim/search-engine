@@ -16,12 +16,12 @@ public class IndexingServiceImpl implements IndexingService {
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
     private LemmatizationService lemmatizationService;
-    boolean isIndexingStarted = false;  //TODO: Сделать private полем
+    boolean isIndexingStarted = false;
     private final SitesList sites;
-    ResultCheckerParse resultCheckerExample;  //TODO: Сделать private полем???
-    Stack<RunnableFuture<Boolean>> taskList = new Stack<>();  //TODO: Сделать private полем???
-    List<StartIndexing> listStartIndexing = new ArrayList<>();  //TODO: Сделать private полем???
-    ExecutorService executor;  //TODO: Сделать private полем???
+    private ResultCheckerParse resultCheckerExample;
+    private Stack<RunnableFuture<Boolean>> taskList = new Stack<>();
+    private List<StartIndexing> listStartIndexing = new ArrayList<>();
+    private ExecutorService executor;
 
     @Autowired
     public IndexingServiceImpl(SiteRepository siteRepository, PageRepository pageRepository,
@@ -50,7 +50,8 @@ public class IndexingServiceImpl implements IndexingService {
                 log.info("Выполнено добавление сайта: {} в FJP/Future", siteDB);
             }
 
-            executor = Executors.newFixedThreadPool(4); // TODO : Внести количество потоков с привязкой к количеству сайтов
+            int countThread = sites.getSites().size()+1;
+            executor = Executors.newFixedThreadPool(countThread);
             taskList.forEach(executor::execute);
 
             resultCheckerExample = new ResultCheckerParse(taskList);

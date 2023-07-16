@@ -34,11 +34,11 @@ public class PageWriter extends RecursiveAction {
     private PageRepository pageRepository;
     @Autowired
     private SiteRepository siteRepository;
-    IndexingService indexingService;
+    private IndexingService indexingService;
     private LemmatizationService lemmatizationService;
     private Page page;
     private Site site;
-    String linkAbs = "";
+    private String linkAbs = "";
     private volatile boolean indexingStarted;
     private volatile boolean isIndexingSiteStarted;
     private ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -329,7 +329,7 @@ public class PageWriter extends RecursiveAction {
     public void parseAllLinks(Document pageLink, List<PageWriter> pageWriterList) throws IOException {
         Elements fullLinks = pageLink.select("a[href]");
         log.info("\nВ методе compute()->parseAllLinks - для Document: {}\nПолучены адреса страниц(формат Element): {}",
-                pageLink, fullLinks);
+                pageLink.title(), fullLinks);
         for (Element valueLink : fullLinks) {
             parseLink(valueLink, pageWriterList);
         }

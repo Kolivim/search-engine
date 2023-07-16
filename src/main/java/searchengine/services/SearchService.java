@@ -73,8 +73,7 @@ public class SearchService {
     }
 
     public SnippetsResponce getAllSitesQueryResponce(String query, int offset, int limit, String site) {
-        //3
-        if (/*isSiteIndexed(site)*/ true) { // TODO: Исправить в product метод проверки isSiteIndexed() - стоит заглушка для возврата "true" - Раскомментировать после отладки кода!!!
+        if (isSiteIndexed(site)) {
             log.info("В методе startSearch() - Сайты проиндексированы, выполняем поиск лемм по запросу: {}", query);
 
             ArrayList<SnippetsResponce> responceSites = new ArrayList<>();
@@ -342,7 +341,7 @@ public class SearchService {
         if (site != null) {
             Site siteSearch = siteRepository.findByUrl(site);
 
-            if (siteSearch.getStatus().equals(StatusType.FAILED))    // TODO: Заменить в product на "StatusType.INDEXED"
+            if (siteSearch.getStatus().equals(StatusType.INDEXED))
             {
                 return true;
             } else {
@@ -354,7 +353,6 @@ public class SearchService {
                 boolean isStopSearch = siteDB.getStatus().equals(StatusType.FAILED) ||
                         siteDB.getStatus().equals(StatusType.INDEXING);
                 if (isStopSearch) {
-                    System.out.println("Поиск остановлен, индексация сайта не завершена: " + siteDB.getUrl());
                     log.info("В методе isSiteIndexed() - Поиск остановлен, индексация сайта не завершена: {}",
                             siteDB.getUrl());
                     return false;
