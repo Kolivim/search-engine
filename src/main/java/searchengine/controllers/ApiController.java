@@ -5,8 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import searchengine.dto.snippets.SnippetsResponce;
+import searchengine.dto.snippets.SnippetsResponse;
 import searchengine.dto.statistics.StatisticsResponse;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 import searchengine.services.*;
 
 import java.util.Map;
@@ -77,7 +79,7 @@ public class ApiController {
     public ResponseEntity<?> search(String query, int offset, int limit, String site) {
         log.info("Запуск метода search() - передано значение: \"{}\" , offset = {} , " +
                 "limit = {}, site = {}", query, offset, limit, site);
-        SnippetsResponce responce = searchService.startSearch(query, offset, limit, site);
+        SnippetsResponse responce = searchService.startSearch(query, offset, limit, site);
         boolean isSearchSuccess = responce.isResult();
         if (isSearchSuccess) {
             return ResponseEntity.ok(responce);

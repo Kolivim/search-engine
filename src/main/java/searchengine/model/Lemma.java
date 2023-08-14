@@ -19,7 +19,8 @@ public class Lemma {
     @Column(name = "site_id", nullable = false)
     private int siteId;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "VARCHAR(255) NOT NULL, Index (lemma(255))") //(columnDefinition = "VARCHAR(255) NOT NULL") // (columnDefinition = "VARCHAR(255) NOT NULL, Index (lemma(255))")
+
     private String lemma;
 
     @Column(nullable = false)

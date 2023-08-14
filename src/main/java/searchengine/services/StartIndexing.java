@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import searchengine.model.Site;
 import searchengine.model.StatusType;
+import searchengine.repository.SiteRepository;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;

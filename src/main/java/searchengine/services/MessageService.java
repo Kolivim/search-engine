@@ -4,11 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import searchengine.dto.snippets.SnippetsResponce;
+import searchengine.dto.snippets.SnippetsResponse;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 @Slf4j
 @Service
@@ -60,7 +59,7 @@ public class MessageService {
         return new ResponseEntity<Map<String, String>>(messageList, HttpStatus.OK);
     }
 
-    public ResponseEntity<Map<String, String>> searchError(SnippetsResponce responce) {
+    public ResponseEntity<Map<String, String>> searchError(SnippetsResponse responce) {
         messageList.clear();
 
         messageList.put("result", "false");

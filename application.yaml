@@ -8,14 +8,14 @@ spring:
     username: root
     password: 171605mEi
     url:
-      jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+      jdbc:mysql://localhost:3306/search_engine_body_title?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
 
   jpa:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update #update # create-drop
 
       format_sql: true
       user_sql_comments: true
@@ -36,3 +36,12 @@ indexing-settings:
       name: PlayBack.Ru
     - url: https://radiomv.ru
       name: radiomv.ru
+    - url: https://dombulgakova.ru/
+      name: Музей-театр Булгакова
+#    - url: https://www.svetlovka.ru/
+#      name: Svetlovka
+#    - url: https://nikoartgallery.com/
+#      name: Галерея Аганесяна 91 стр
+#    - url: https://ipfran.ru/
+#      name: ipfran.ru
+

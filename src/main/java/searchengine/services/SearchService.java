@@ -6,9 +6,13 @@ import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 
 import searchengine.dto.snippets.DetailedSnippetsItem;
-import searchengine.dto.snippets.SnippetsResponce;
+import searchengine.dto.snippets.SnippetsResponse;
 
 import searchengine.model.*;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 
 
 import java.io.IOException;
@@ -36,9 +40,9 @@ public class SearchService {
         this.indexRepository = indexRepository;
     }
 
-    public SnippetsResponce getEmptyQueryResponce(String query) {
-        log.info("В методе startSearch()->getEmptyQueryResponce() - В запросе передана пустая строка: {}", query);
-        SnippetsResponce response = new SnippetsResponce();
+    public SnippetsResponse getEmptyQueryResponse(String query) {
+        log.info("В методе startSearch()->getEmptyQueryResponse() - В запросе передана пустая строка: {}", query);
+        SnippetsResponse response = new SnippetsResponse();
         response.setResult(false);
         response.setCount(-2);
         log.info("В методе startSearch()->getEmptyQueryResponce() ошибка №2 - Отправляем SnippetsResponce: [\n{}\n]",
@@ -46,47 +50,47 @@ public class SearchService {
         return response;
     }
 
-    public SnippetsResponce getUnIndexedSitesResponce() {
-        SnippetsResponce response = new SnippetsResponce();
+    public SnippetsResponse getUnIndexedSitesResponse() {
+        SnippetsResponse response = new SnippetsResponse();
         response.setResult(false);
         response.setCount(-1);
-        log.info("В методе getUnIndexedSitesResponce() ошибка №1 - Отправляем SnippetsResponce: [\n{}\n]", response);
+        log.info("В методе getUnIndexedSitesResponse() ошибка №1 - Отправляем SnippetsResponse: [\n{}\n]", response);
         return response;
     }
 
-    public SnippetsResponce getSingleSiteQueryResponce(String query, int offset, int limit, String site) {
-        log.info("В методе startSearch()->getSingleSiteQueryResponce() - Получен запрос по поиску " +
+    public SnippetsResponse getSingleSiteQueryResponse(String query, int offset, int limit, String site) {
+        log.info("В методе startSearch()->getSingleSiteQueryResponse() - Получен запрос по поиску " +
                 "на единственной странице: {}", site);
         if (isSiteIndexed(site)) {
-            log.info("В методе startSearch()->getSingleSiteQueryResponce() - Сайт: {} - проиндексирован, выполняем " +
+            log.info("В методе startSearch()->getSingleSiteQueryResponse() - Сайт: {} - проиндексирован, выполняем " +
                     "поиск лемм по запросу: {}", site, query);
-            SnippetsResponce response = searchOnSite(query, offset, limit, site);
-            log.info("В методе startSearch()->getSingleSiteQueryResponce() - Вывод SnippetsResponce responce: " +
+            SnippetsResponse response = searchOnSite(query, offset, limit, site);
+            log.info("В методе startSearch()->getSingleSiteQueryResponse() - Вывод SnippetsResponce responce: " +
                     "\n{}\n - для запроса: {}", response, query);
             return response;
         } else {
-            log.info("В методе startSearch()->getSingleSiteQueryResponce() - Сайт: {} - НЕ проиндексирован, ошибка! " +
+            log.info("В методе startSearch()->getSingleSiteQueryResponse() - Сайт: {} - НЕ проиндексирован, ошибка! " +
                     "Поиск не выполняется по запросу: {}", site, query);
 
-            return getUnIndexedSitesResponce();
+            return getUnIndexedSitesResponse();
         }
     }
 
-    public SnippetsResponce getAllSitesQueryResponce(String query, int offset, int limit, String site) {
+    public SnippetsResponse getAllSitesQueryResponse(String query, int offset, int limit, String site) {
         if (isSiteIndexed(site)) {
             log.info("В методе startSearch() - Сайты проиндексированы, выполняем поиск лемм по запросу: {}", query);
 
-            ArrayList<SnippetsResponce> responceSites = new ArrayList<>();
+            ArrayList<SnippetsResponse> responseSites = new ArrayList<>();
             Iterable<searchengine.model.Site> siteIterable = siteRepository.findAll();
             for (searchengine.model.Site siteDB : siteIterable) {
-                SnippetsResponce responceSite = searchOnSite(query, offset, limit, siteDB.getUrl());
-                responceSites.add(responceSite);
+                SnippetsResponse responseSite = searchOnSite(query, offset, limit, siteDB.getUrl());
+                responseSites.add(responseSite);
             }
 
             ArrayList<DetailedSnippetsItem> dataSites = new ArrayList<>();
-            for (SnippetsResponce responceSite : responceSites) {
-                if (responceSite.isResult()) {
-                    dataSites.addAll(responceSite.getData());
+            for (SnippetsResponse responseSite : responseSites) {
+                if (responseSite.isResult()) {
+                    dataSites.addAll(responseSite.getData());
                 }
             }
 
@@ -95,37 +99,37 @@ public class SearchService {
             log.debug("В методе startSearch() - \nВывод отсортированного по убыванию relevance " +
                     "ArrayList<DetailedSnippetsItem> dataSites:\n {}", dataSites);
 
-            SnippetsResponce responceAllSites = new SnippetsResponce(dataSites);
-            log.info("В методе startSearch() - \nВывод SnippetsResponce responceAllSites: {}", responceAllSites);
+            SnippetsResponse responseAllSites = new SnippetsResponse(dataSites);
+            log.info("В методе startSearch() - \nВывод SnippetsResponce responseAllSites: {}", responseAllSites);
 
-            return responceAllSites;
+            return responseAllSites;
         } else {
             log.info("В методе startSearch() - В списке есть НЕ проиндексированный(е) сайт(ы): {} - ошибка! " +
                     "Поиск не выполняется: {}", site, query);
-            return getUnIndexedSitesResponce();
+            return getUnIndexedSitesResponse();
         }
     }
 
-    public SnippetsResponce startSearch(String query, int offset, int limit, String site) {
+    public SnippetsResponse startSearch(String query, int offset, int limit, String site) {
 
         if (query.isEmpty() || query.isBlank()) {
-            return getEmptyQueryResponce(query);
+            return getEmptyQueryResponse(query);
         }
         if (site != null) {
-            return getSingleSiteQueryResponce(query, offset, limit, site);
+            return getSingleSiteQueryResponse(query, offset, limit, site);
         } else {
             log.info("В методе startSearch() - Получен запрос по поиску на всех страницах:");
-            return getAllSitesQueryResponce(query, offset, limit, site);
+            return getAllSitesQueryResponse(query, offset, limit, site);
         }
     }
 
-    public SnippetsResponce searchOnSite(String query, int offset, int limit, String site) {
+    public SnippetsResponse searchOnSite(String query, int offset, int limit, String site) {
         try {
             HashMap<String, Integer> splitLemmasText = lemmatizationService.splitLemmasText(query);
             Set<String> lemmasList = splitLemmasText.keySet();
             log.info("В методе searchOnSite() - Получен текст лемм поискового запроса: {}", lemmasList);
 
-            ArrayList<Lemma> lemmas = getLemma(lemmasList, site);
+            ArrayList<Lemma> lemmas = getLemmasList(lemmasList, site);
             log.info("В методе searchOnSite() - Получен леммы: {}", lemmas);
 
             ArrayList<Page> lemmaPages = getPagesSearchList(lemmas, site);
@@ -143,16 +147,16 @@ public class SearchService {
         return null;
     }
 
-    public SnippetsResponce getEmptyListLemmas() {
+    public SnippetsResponse getEmptyListLemmas() {
         List<DetailedSnippetsItem> detailed = new ArrayList<>();
-        SnippetsResponce response = new SnippetsResponce(detailed);
+        SnippetsResponse response = new SnippetsResponse(detailed);
         response.setResult(true);
-        log.info("В методе searchOnSite() - Отправляем SnippetsResponce с пустым списком страниц: [\n {} \n]",
+        log.info("В методе searchOnSite() - Отправляем SnippetsResponse с пустым списком страниц: [\n {} \n]",
                 response);
         return response;
     }
 
-    public SnippetsResponce getListWithLemmas(ArrayList<Page> lemmaPages, Set<String> lemmasList) {
+    public SnippetsResponse getListWithLemmas(ArrayList<Page> lemmaPages, Set<String> lemmasList) {
 
         if (!lemmaPages.isEmpty()) {
 
@@ -175,10 +179,10 @@ public class SearchService {
             log.debug("В методе searchOnSite() - Получен из метода getSnippetDTO() list:\n [ {} ]",
                     getSnippetDTO(sortedAbsoluteRelevancePages, sortedAbsoluteRelevancePagesSnippet));
 
-            SnippetsResponce response = new SnippetsResponce(getSnippetDTO(sortedAbsoluteRelevancePages,
+            SnippetsResponse response = new SnippetsResponse(getSnippetDTO(sortedAbsoluteRelevancePages,
                     sortedAbsoluteRelevancePagesSnippet));
 
-            log.info("В методе searchOnSite() - Отправляем SnippetsResponce: [\n{}\n]", response);
+            log.info("В методе searchOnSite() - Отправляем SnippetsResponse: [\n{}\n]", response);
 
             return response;
 
@@ -305,19 +309,37 @@ public class SearchService {
         }
 
         ArrayList<Page> pagesWithLemma = new ArrayList<>();
+
+        List<Integer> pagesId = new ArrayList<>();
         for (Page page : pages) {
             int pageId = page.getId();
-            Optional<Index> indexLemmaSiteSearch = indexRepository.findByPageIdAndLemmaId(pageId, lemmmaFindId);
-            if (indexLemmaSiteSearch.isPresent()) {
+            pagesId.add(pageId);
+        }
+
+        List<Integer> lemmaPagesIdList = new ArrayList<>();
+        List<Index> indexes = indexRepository.findAllByLemmaId(lemmmaFindId);
+
+        for (Index index : indexes) {
+            int lemmaPageId = index.getPageId();
+            if (pagesId.contains(lemmaPageId)) {
+                lemmaPagesIdList.add(lemmaPageId);
+            }
+        }
+
+        for (Integer lemmaPageId : lemmaPagesIdList) {
+            Optional<Page> pageOptional = pageRepository.findById(lemmaPageId);
+            if (pageOptional.isPresent()) {
+                Page page = pageOptional.get();
                 pagesWithLemma.add(page);
                 log.info("В методе getPageWithLemma() - При поиске леммы: {} - добавлена страница: {} сайта: {}",
                         lemma, page.getPath(), page.getSiteId());
             }
         }
+
         return pagesWithLemma;
     }
 
-    public ArrayList<Lemma> getLemma(Set<String> lemmasList, String site) {
+    public ArrayList<Lemma> getLemmasList(Set<String> lemmasList, String site) {
         Site siteSearch = siteRepository.findByUrl(site);
         ArrayList<Lemma> lemmas = new ArrayList<>();
 
@@ -341,8 +363,7 @@ public class SearchService {
         if (site != null) {
             Site siteSearch = siteRepository.findByUrl(site);
 
-            if (siteSearch.getStatus().equals(StatusType.INDEXED))
-            {
+            if (siteSearch.getStatus().equals(StatusType.INDEXED)) {
                 return true;
             } else {
                 return false;
